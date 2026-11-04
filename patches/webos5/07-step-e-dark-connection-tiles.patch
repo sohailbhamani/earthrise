@@ -1,0 +1,39 @@
+diff --git a/UserInterfaceLayer/Containers/Sub/MobileComponent.qml b/UserInterfaceLayer/Containers/Sub/MobileComponent.qml
+index 79c9bcd..3ef882c 100755
+--- a/UserInterfaceLayer/Containers/Sub/MobileComponent.qml
++++ b/UserInterfaceLayer/Containers/Sub/MobileComponent.qml
+@@ -51,6 +51,7 @@ Selectable {
+                 else {
++                    // custom: dark tiles
+                     if(entry.activate === false || entry.activate === "inactive")
+-                        return "#A6A6A6";
++                        return "#66151A24";
+                     else
+-                        return "#FFFFFF";
++                        return root.hasFocus ? "#3A4150" : "#CC151A24";
+                 }
+@@ -65,3 +66,3 @@ Selectable {
+             else
+-                return "#FFFFFF";
++                return root.hasFocus ? "#FFFFFF" : "#40FFFFFF"; // custom: dark tiles
+         }
+@@ -114,2 +115,4 @@ Selectable {
+             id: defaultImg
++            layer.enabled: !(entry && entry.type === "mobile") // custom: light icons on dark tiles
++            layer.effect: ColorOverlay { color: "#E6E6E6" }
+ 
+@@ -131,2 +134,4 @@ Selectable {
+             id: img
++            layer.enabled: !(entry && entry.type === "mobile") // custom: light icons on dark tiles
++            layer.effect: ColorOverlay { color: "#E6E6E6" }
+ 
+@@ -222,3 +227,3 @@ Selectable {
+                         else
+-                            return "#000000";
++                            return "#F2F2F2"; // custom: dark tiles
+                     }
+@@ -251,3 +256,3 @@ Selectable {
+                     else
+-                        return "#000000";
++                        return "#F2F2F2"; // custom: dark tiles
+                 }
