@@ -3,11 +3,11 @@
 The fourth TV is a 32LM577BPUA, a 2019 model on software 05.40.97. The
 software version starts with 05, but the OS is webOS 4.5: it reports itself as
 "webOS TV Lite", release 4.10.2 (`goldilocks2`). The folders are named
-`webos5` after the firmware number. It's the smallest TV here: 658 MB of RAM.
+`webos4.5` after the OS. It's the smallest TV here: 658 MB of RAM.
 The same idea works (overlay, checkpoint delete, relaunch), but on this
-firmware it has to point at a different app. The ported patches are in [`../patches/webos5`](../patches/webos5), one file per
+firmware it has to point at a different app. The ported patches are in [`../patches/webos4.5`](../patches/webos4.5), one file per
 step, same names as the 6.5 set, and the boot hook is
-[`../hooks/webos5/70-homeqml-k`](../hooks/webos5/70-homeqml-k).
+[`../hooks/webos4.5/70-homeqml-k`](../hooks/webos4.5/70-homeqml-k).
 
 ## Two home apps
 
@@ -23,7 +23,7 @@ This firmware ships two home apps:
 The patches go on `fullhome`. Its QML lives at
 `/usr/palm/applications/com.webos.app.fullhome/qml` and has the same layout as
 the 6.5 home (`UserInterfaceLayer/`, `Interfaces/`, `Model/`, ...), so every
-file the patches touch is where you'd expect it. The hook in `hooks/webos5/` is
+file the patches touch is where you'd expect it. The hook in `hooks/webos4.5/` is
 `hooks/70-homeqml-k` with the app id changed to `com.webos.app.fullhome`, for
 the mount, the checkpoint dirs, the process it kills and the app it launches.
 `scripts/deploy.sh` still points at `com.webos.app.home`, so on this TV copy
