@@ -1,0 +1,16 @@
+#!/bin/sh
+# Krieger home-screen overlay for firmware 05.x (webOS 4.5): patched copy of LG's stock full home QML.
+# Here the full-screen home is com.webos.app.fullhome (com.webos.app.home is the old launcher bar).
+echo "$(date) ran $0" >> /var/log/hook.log
+SRC=/var/lib/webosbrew/homeqml-k/qml
+DST=/usr/palm/applications/com.webos.app.fullhome/qml
+[ -f $SRC/main.qml ] || exit 0
+umount $DST 2>/dev/null
+mount --bind $SRC $DST
+# LG restores home from a criu checkpoint holding the stock QML; drop it so home relaunches from SRC.
+rm -rf /mnt/lg/cmn_data/checkpoint/com.webos.app.fullhome /var/palm/jail/*/tmp/checkpoint/com.webos.app.fullhome
+for p in /proc/[0-9]*; do
+  case "$(tr '\0' ' ' < $p/cmdline 2>/dev/null)" in /usr/bin/com.webos.app.fullhome*) kill -9 ${p#/proc/};; esac
+done
+sleep 4
+luna-send -n 1 luna://com.webos.applicationManager/launch '{"id":"com.webos.app.fullhome"}'

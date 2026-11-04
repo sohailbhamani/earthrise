@@ -1,0 +1,9 @@
+diff --git a/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml b/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
+index a56ae5b..37f5348 100755
+--- a/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
++++ b/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
+@@ -1020,2 +1020,4 @@ Item {
+         tempArray = titleTile.concat(activateItems).concat(inActivateItems).concat(iotDevices).concat(remotePCTile).concat(getGuideTile());
++        // custom: drop the Home Dashboard, mobile Connection Guide and See User Guide tiles; keep AirPlay, inputs and Remote PC
++        tempArray = tempArray.filter(function(item){ return item.type !== "title" && item.type !== "mobile_guide" && item.type !== "guide"; });
+ 

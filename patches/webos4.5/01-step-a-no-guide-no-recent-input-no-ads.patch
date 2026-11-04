@@ -1,0 +1,67 @@
+diff --git a/Interfaces/PromotionInterfaces/PromotionInterfaces.qml b/Interfaces/PromotionInterfaces/PromotionInterfaces.qml
+index 9b28bf9..189cb2e 100755
+--- a/Interfaces/PromotionInterfaces/PromotionInterfaces.qml
++++ b/Interfaces/PromotionInterfaces/PromotionInterfaces.qml
+@@ -516,2 +516,3 @@ Item {
+         root.sponsoredAdData = []
++        return; // custom: no ads
+         var adSize = systemProperties.is4K ? Qt.size(600, 500) : Qt.size(300, 250);
+diff --git a/Model/ShelfList.js b/Model/ShelfList.js
+index ee7c67f..531d893 100644
+--- a/Model/ShelfList.js
++++ b/Model/ShelfList.js
+@@ -38,3 +38,3 @@ var ShelfList = (function () {
+                     if (response) {
+-                        self._initByServerData(systemProperties.shelfListDataSDX);
++                        self._initByDefault(); // custom: default shelves, not LG server list
+                     } else {
+@@ -49,3 +49,3 @@ var ShelfList = (function () {
+                         if (response) {
+-                            self._initByServerData(systemProperties.shelfListDataSDX);
++                            self._initByDefault(); // custom: default shelves, not LG server list
+                         } else {
+@@ -324,2 +324,3 @@ var ShelfList = (function () {
+                 return this._shelfData.filter(function (item) {
++                    if (item.shelfId === "HOME_SH_RECOMMENDED") return false; // custom: no "Trending now" row (and its Recent Input tile)
+                     if (self.appInterfaces.isDefaultShelf || self.appInterfaces.sdxNotReady) {
+diff --git a/UserInterfaceLayer/Containers/Main/AdShelf.qml b/UserInterfaceLayer/Containers/Main/AdShelf.qml
+index bc6b97a..25b4ca6 100644
+--- a/UserInterfaceLayer/Containers/Main/AdShelf.qml
++++ b/UserInterfaceLayer/Containers/Main/AdShelf.qml
+@@ -126,3 +126,3 @@ FocusScope {
+             anchors.fill: parent
+-            visible: !mainView.isHalfMode
++            visible: false // custom: no Recent Input card
+ 
+diff --git a/UserInterfaceLayer/Containers/Main/Hero.qml b/UserInterfaceLayer/Containers/Main/Hero.qml
+index 14ebfff..c1e7135 100755
+--- a/UserInterfaceLayer/Containers/Main/Hero.qml
++++ b/UserInterfaceLayer/Containers/Main/Hero.qml
+@@ -735,3 +735,3 @@ FocusScope {
+         });
+-        interfaces.promotion.requestRecommendedSponsoredAdData();
++        // custom: no ads  interfaces.promotion.requestRecommendedSponsoredAdData();
+     }
+diff --git a/UserInterfaceLayer/Containers/Main/TopShelf.qml b/UserInterfaceLayer/Containers/Main/TopShelf.qml
+index e0b3ea3..071aa10 100755
+--- a/UserInterfaceLayer/Containers/Main/TopShelf.qml
++++ b/UserInterfaceLayer/Containers/Main/TopShelf.qml
+@@ -35,3 +35,3 @@ FocusScope {
+         if(activeFocus) {
+-            if(systemProperties.isTopShelfGuide && !uiController.isEditMode) {
++            if(false && systemProperties.isTopShelfGuide && !uiController.isEditMode) {
+                 topShelfGuide.forceActiveFocus();
+@@ -61,3 +61,3 @@ FocusScope {
+         enabled: visible
+-        visible: (systemProperties.isTopShelfGuide && !uiController.isEditMode)
++        visible: (false && systemProperties.isTopShelfGuide && !uiController.isEditMode)
+ 
+diff --git a/UserInterfaceLayer/UIController.qml b/UserInterfaceLayer/UIController.qml
+index 77df127..af93b8c 100755
+--- a/UserInterfaceLayer/UIController.qml
++++ b/UserInterfaceLayer/UIController.qml
+@@ -269,3 +269,3 @@ FocusScope {
+             if(systemProperties.isWEE) {
+-                interfaces.advertisement.makeAdBanner();
++                // custom: no ads  interfaces.advertisement.makeAdBanner();
+             }

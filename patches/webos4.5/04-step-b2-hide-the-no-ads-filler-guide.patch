@@ -1,0 +1,9 @@
+diff --git a/UserInterfaceLayer/Containers/Main/TopShelf.qml b/UserInterfaceLayer/Containers/Main/TopShelf.qml
+index e0b3ea3..f601eae 100755
+--- a/UserInterfaceLayer/Containers/Main/TopShelf.qml
++++ b/UserInterfaceLayer/Containers/Main/TopShelf.qml
+@@ -89,3 +89,3 @@ FocusScope {
+         enabled: visible
+-        visible: !topShelfGuide.visible && hero.noAdvertisement
++        visible: false // custom: no "Start a new experience" filler (was !topShelfGuide.visible && hero.noAdvertisement)
+ 

@@ -5,7 +5,7 @@ index 0c8c53a..9dbaf39 100755
 @@ -56,6 +56,8 @@ function Processor() {
  
 -                            systemProperties.launchPoints = response.launchPoints;
-+                            // custom: hide launcher icons Riz never uses (apps stay installed)
++                            // custom: hide launcher icons we never use (apps stay installed)
 +                            var customHidden = ["com.webos.app.lgchannels", "com.webos.app.homeconnect", "com.webos.app.sportsteamsettings", "com.webos.app.browser", "com.webos.app.mediadiscovery", "amazon.alexa.view", "com.webos.app.livepick-full", "com.webos.app.roomconnect", "org.webosbrew.vncserver"];
 +                            systemProperties.launchPoints = response.launchPoints.filter(function(lp) { return customHidden.indexOf(lp.id) < 0; });
                          }

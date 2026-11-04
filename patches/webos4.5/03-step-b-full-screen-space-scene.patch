@@ -1,0 +1,35 @@
+diff --git a/UserInterfaceLayer/Containers/MainView.qml b/UserInterfaceLayer/Containers/MainView.qml
+index dca2bec..3fa45ee 100755
+--- a/UserInterfaceLayer/Containers/MainView.qml
++++ b/UserInterfaceLayer/Containers/MainView.qml
+@@ -150,2 +150,15 @@ FocusScope {
+ 
++        // custom: one full-screen space scene behind the whole home screen
++        Image {
++            id: customSpaceBg
++            anchors.fill: parent
++            z: -1
++            source: systemProperties.getImageUrl("bg_space.jpg")
++            sourceSize: Qt.size(1920, 1080)
++            fillMode: Image.PreserveAspectCrop
++            asynchronous: true
++            cache: true
++            visible: uiController.isFullHome && !uiController.isEditMode
++        }
++
+         Loader {
+@@ -187,3 +200,3 @@ FocusScope {
+                 anchors.fill: parent
+-                color: styleSheet.screen.bgColor
++                color: "transparent" // custom: scene shows through (was styleSheet.screen.bgColor)
+ 
+@@ -201,3 +214,3 @@ FocusScope {
+                     cache: false
+-                    opacity: (systemProperties.isCheckAdvertisement || !systemProperties.homePromotionOn || !systemProperties.networkConnected) ? 1 : 0.7
++                    opacity: 0 // custom: the scene is the top band (was 1 or 0.7)
+                     visible: (!systemProperties.isTopShelfGuide && systemProperties.isNoAdvertisement && !uiController.isEditMode) === true && uiController.isFullHome && (shelfListContainer.state === "app" || interfaces.application.isDefaultShelfList)
+@@ -226,3 +239,3 @@ FocusScope {
+             anchors.fill: parent
+-            color: styleSheet.screen.bgColor//"#000000"
++            color: "transparent" // custom: was styleSheet.screen.bgColor
+             visible: !uiController.isEditMode && uiController.isFullHome && systemProperties.isTopShelfGuide === false && (systemProperties.isNoAdvertisement === false || (shelfListContainer.state === "list" && !interfaces.application.isDefaultShelfList))

@@ -1,6 +1,6 @@
 # webOS Home Screen Lab
 
-Reclaim the home screen on an LG webOS 6.x or 7.x TV you own: drop the ads, promos,
+Reclaim the home screen on an LG webOS 4.5, 6.x or 7.x TV you own: drop the ads, promos,
 "Start a new experience" filler and unused tiles, put a full-screen photo
 behind everything, and make the input tiles dark so they sit on it.
 
@@ -18,6 +18,7 @@ after the TV is already rooted.
 | 43UP8000PUR | 2021 / webOS 6.5 | 03.51.16 | 1 GB | Not measured. The background is made at 1920x1080 and goes in `images/2k` and `images/4k` | `patches/` | The original set. Screenshots through the VNC Server app |
 | 43UQ7070ZUD | 2022 / webOS 7.6 (webOS 22) | 04.60.90 | 1.3 GB | 1920x1080 on a 4K panel, so images load from `images/2k` | `patches/webos7/` | Stock home adds a "TV functions" shelf, which `01` removes. `05` also hides the "See User Guide" tile. Screenshots with the capture service need `SCREEN`, since `DISPLAY` comes back black. See [`docs/06-webos7.md`](docs/06-webos7.md) |
 | 43UP8000PUR | 2021 / webOS 6.5.3 | 03.53.45 | 1 GB (about 1070 MB usable) | 1920x1080 on a 4K panel, so images load from `images/2k` | `patches/webos6-03.53/` | Same model as the first row, newer firmware. `01` and `03` needed new context, and `05` also hides the "See User Guide" tile. The LG Channels row above the apps goes away only with *Recommendations on Home* off. See [`docs/07-webos6-03.53.md`](docs/07-webos6-03.53.md) |
+| 32LM577BPUA | 2019 / webOS 4.5 ("webOS TV Lite") | 05.40.97 | 658 MB | 1920x1080 on an HD panel, so images load from `images/2k` | `patches/webos4.5/` | The full-screen home is `com.webos.app.fullhome`, so it uses `hooks/webos4.5/70-homeqml-k`. `01` also drops the "Trending now" row, and `05` also hides the "See User Guide" tile. VNC Server doesn't start, so screenshots come from the compositor. See [`docs/08-webos4.5.md`](docs/08-webos4.5.md) |
 
 Other models use the same home app structure, but file names and image sizes
 vary, so read your own files instead of pasting mine.
@@ -36,10 +37,13 @@ vary, so read your own files instead of pasting mine.
 | `docs/05-apps-and-settings.md` | The homebrew apps we install and why, plus the privacy pass |
 | `docs/06-webos7.md` | What changes on webOS 7 (webOS 22): ported patches, screen size, app notes |
 | `docs/07-webos6-03.53.md` | What changes on webOS 6.5 firmware 03.53.45: ported patches and the LG Channels row |
+| `docs/08-webos4.5.md` | What changes on firmware 05.40.97 (webOS 4.5): the full-screen home app, ported patches, 658 MB of RAM, screenshots |
 | `patches/` | One `git`-style patch per change, against LG's stock home QML (webOS 6.5) |
 | `patches/webos7/` | The same patches ported to webOS 7 |
 | `patches/webos6-03.53/` | The same patches for webOS 6.5 firmware 03.53.45 |
+| `patches/webos4.5/` | The same patches ported to firmware 05.40.97, webOS 4.5 (`com.webos.app.fullhome`) |
 | `hooks/70-homeqml-k` | Boot hook: bind-mounts the patched copy and relaunches home |
+| `hooks/webos4.5/70-homeqml-k` | The same hook for firmware 05.x (webOS 4.5), where the full-screen home is `com.webos.app.fullhome` |
 | `scripts/render_home_bg.py` | Turns the ESO Milky Way panorama into a TV-safe background (geometry is tuned to that image) |
 | `scripts/deploy.sh` | Copies the overlay to the TV and applies it |
 
@@ -61,7 +65,7 @@ checkpoint, so you have to delete the checkpoint or your edits stay invisible.
 # 1. Copy LG's stock home QML off the TV to ./stock-qml, then:
 cd stock-qml
 git init -q && git add -A && git commit -qm stock      # baseline to diff against
-git apply ../patches/*.patch                            # webOS 6.x; on webOS 7 use ../patches/webos7/*.patch
+git apply ../patches/*.patch                            # webOS 6.x; on webOS 7 use ../patches/webos7/*.patch, on firmware 05.x ../patches/webos4.5/*.patch
 
 # 2. Render the background. The rotation/crop are tuned for the 3840x1920 ESO
 #    Milky Way panorama; for another photo, adjust the constants at the top.
