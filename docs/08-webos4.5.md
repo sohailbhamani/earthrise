@@ -58,8 +58,8 @@ connection shelf with Home Dashboard and Connection Guide tiles.
   and the banner's opacity check includes `networkConnected`). Same fix: one
   `Image` behind everything, both covers transparent, banner opacity `0`.
 - `04` and `07`: the 6.5 patches apply as they are.
-- `06`: the 6.5 patch plus three LG apps that can't be uninstalled here
-  (Photo & Video, LG Content Store and Music), hidden from the home row.
+- `06`: also hides Photo & Video, LG Content Store and Music, which can't be
+  uninstalled here.
 - `05`: the shelf is built from `activateItems` and `inActivateItems` instead
   of one `tempArray`, so the filter goes after that line. This firmware also adds a
   "See User Guide" tile (type `"guide"`), so `05` drops it too, as on webOS 7.
@@ -84,13 +84,11 @@ in use. What helped:
 - `fullhome` runs at about 21 MB when it's restored from its checkpoint and
   about 75 MB after a fresh launch. Relaunch it once per change and check
   `MemAvailable` in `/proc/meminfo` before the next one.
-- Don't keep services you don't need running. The VNC server (below) doesn't
-  work here, so it was removed.
 
 ## Screenshots
 
-There's no `com.webos.service.capture` on this TV, and the VNC Server app
-doesn't start (see below). The compositor can capture the screen instead:
+There's no `com.webos.service.capture` on this TV. VNC Server doesn't work on
+this firmware, so don't install it. Use the compositor instead:
 
 ```sh
 luna-send -n 1 luna://com.webos.surfacemanager/captureCompositorOutput \
@@ -99,31 +97,6 @@ luna-send -n 1 luna://com.webos.surfacemanager/captureCompositorOutput \
 
 It reports `1920x1080`, but the file it writes is 1280x720. That's enough to
 check a change. `luna-send` prints nothing without a TTY, so use `ssh -tt`.
-
-### VNC Server
-
-`org.webosbrew.vncserver` 1.0.3 installs fine through the Homebrew Channel
-install service (the `.ipk` URL and sha256 are in the webosbrew repo listing;
-check the hash yourself):
-
-```sh
-luna-send -i luna://org.webosbrew.hbchannel.service/install \
-  '{"id":"org.webosbrew.vncserver","ipkUrl":"<release .ipk url>","ipkHash":"<sha256>","subscribe":true}'
-```
-
-But `start` fails with `"Startup failed"`, `errorCode` `-4`. In the VNC
-server's source, `-4` means setting up input failed. It creates its uinput
-device, then calls LG's input manager (`IM_RequestToCheckInput()` in
-`libim`), and that call fails on this firmware. Screen capture isn't the
-problem. Each failed start leaves one more uinput device behind until the
-service exits. So don't retry it in a loop. Since it can't work here, I removed it:
-
-```sh
-luna-send -n 1 luna://com.webos.appInstallService/remove '{"id":"org.webosbrew.vncserver"}'
-```
-
-The `06` patch still lists its launcher id, which does nothing once the app is
-gone.
 
 ## Apps and the privacy pass
 
