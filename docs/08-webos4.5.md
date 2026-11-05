@@ -57,7 +57,9 @@ connection shelf with Home Dashboard and Connection Guide tiles.
 - `03`: the cover rectangles look like webOS 7 (`styleSheet.screen.bgColor`,
   and the banner's opacity check includes `networkConnected`). Same fix: one
   `Image` behind everything, both covers transparent, banner opacity `0`.
-- `04`, `06` and `07`: the 6.5 patches apply as they are.
+- `04` and `07`: the 6.5 patches apply as they are.
+- `06`: the 6.5 patch plus three LG apps that can't be uninstalled here
+  (Photo & Video, LG Content Store and Music), hidden from the home row.
 - `05`: the shelf is built from `activateItems` and `inActivateItems` instead
   of one `tempArray`, so the filter goes after that line. This firmware also adds a
   "See User Guide" tile (type `"guide"`), so `05` drops it too, as on webOS 7.

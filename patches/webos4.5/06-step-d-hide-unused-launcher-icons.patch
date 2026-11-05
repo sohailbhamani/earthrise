@@ -6,10 +6,10 @@ index 9666bbc..320860a 100755
  
 -                            systemProperties.launchPoints = response.launchPoints;
 +                            // custom: hide launcher icons we never use (apps stay installed)
-+                            var customHidden = ["com.webos.app.lgchannels", "com.webos.app.homeconnect", "com.webos.app.sportsteamsettings", "com.webos.app.browser", "com.webos.app.mediadiscovery", "amazon.alexa.view", "com.webos.app.livepick-full", "com.webos.app.roomconnect", "org.webosbrew.vncserver"];
++                            var customHidden = ["com.webos.app.lgchannels", "com.webos.app.homeconnect", "com.webos.app.sportsteamsettings", "com.webos.app.browser", "com.webos.app.mediadiscovery", "amazon.alexa.view", "com.webos.app.livepick-full", "com.webos.app.roomconnect", "org.webosbrew.vncserver", "com.webos.app.photovideo", "com.webos.app.discovery", "com.webos.app.music"];
 +                            systemProperties.launchPoints = response.launchPoints.filter(function(lp) { return customHidden.indexOf(lp.id) < 0; });
                          }
  
 -                        if(response.change !== undefined) {
-+                        if(response.change !== undefined && ["com.webos.app.lgchannels", "com.webos.app.homeconnect", "com.webos.app.sportsteamsettings", "com.webos.app.browser", "com.webos.app.mediadiscovery", "amazon.alexa.view", "com.webos.app.livepick-full", "com.webos.app.roomconnect", "org.webosbrew.vncserver"].indexOf(response.id) < 0) {
++                        if(response.change !== undefined && ["com.webos.app.lgchannels", "com.webos.app.homeconnect", "com.webos.app.sportsteamsettings", "com.webos.app.browser", "com.webos.app.mediadiscovery", "amazon.alexa.view", "com.webos.app.livepick-full", "com.webos.app.roomconnect", "org.webosbrew.vncserver", "com.webos.app.photovideo", "com.webos.app.discovery", "com.webos.app.music"].indexOf(response.id) < 0) {
                              systemProperties.updatedAppObject = response;
