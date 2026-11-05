@@ -83,7 +83,7 @@ in use. What helped:
   about 75 MB after a fresh launch. Relaunch it once per change and check
   `MemAvailable` in `/proc/meminfo` before the next one.
 - Don't keep services you don't need running. The VNC server (below) doesn't
-  work here, so it isn't started at boot.
+  work here, so it was removed.
 
 ## Screenshots
 
@@ -114,8 +114,14 @@ server's source, `-4` means setting up input failed. It creates its uinput
 device, then calls LG's input manager (`IM_RequestToCheckInput()` in
 `libim`), and that call fails on this firmware. Screen capture isn't the
 problem. Each failed start leaves one more uinput device behind until the
-service exits. So don't retry it in a loop. The app stays installed and its
-launcher icon is hidden by `06`.
+service exits. So don't retry it in a loop. Since it can't work here, I removed it:
+
+```sh
+luna-send -n 1 luna://com.webos.appInstallService/remove '{"id":"org.webosbrew.vncserver"}'
+```
+
+The `06` patch still lists its launcher id, which does nothing once the app is
+gone.
 
 ## Apps and the privacy pass
 
