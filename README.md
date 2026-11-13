@@ -13,8 +13,10 @@ screensaver with a small spinning Earth.
 
 On webOS 7 (2022 models):
 
-- **Clock and weather.** Big 12-hour clock, the date, current weather, the
-  next 16 hours in 2-hour steps and a 7-day forecast.
+- **Clock and weather.** Big 12-hour clock and the date. Current weather with
+  today's high and low, the next 16 hours in 2-hour steps (icon, temperature,
+  chance of rain) and a 7-day forecast (icon, high, low, chance of rain). From
+  Open-Meteo, refreshed every 15 minutes.
 - **A live Earth.** NASA's Blue Marble, lit by the real sun for the current
   minute, with city lights on the night side and clouds from NOAA's GOES-West
   satellite, refreshed every 15 minutes. A pin marks your town.
