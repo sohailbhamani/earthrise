@@ -1,4 +1,4 @@
-# webOS Home Lab
+# Earthrise
 
 Turn the home screen of a rooted LG TV into a clock and weather screen with a
 live view of Earth behind it. It removes LG's ads and promos and replaces the
