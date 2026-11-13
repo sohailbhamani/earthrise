@@ -140,6 +140,8 @@ The Earth turns under a fixed sun, one turn every 2 minutes. Every loop (about
 30 seconds) the screensaver reloads it, and it moves to a new random spot, so
 nothing sits still on the panel.
 
+![the screensaver on the test TV](../assets/webos7-screensaver.jpg)
+
 `hooks/72-screensaver-k` bind-mounts a patched copy over the stock one, the same
 trick as the home overlay:
 
