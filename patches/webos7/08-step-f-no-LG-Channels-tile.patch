@@ -1,0 +1,10 @@
+--- a/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
++++ b/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
+@@ -1040,6 +1040,7 @@
+ 
+     //static objects
+     function addLGChannelsItem(updateFlag) {
++        return; // krieger: no LG Channels tile on the inputs row
+ 
+         const lgServiceCountries = ["GBR","DNK","NLD","NOR","SWE","ITA"];
+         var lgChannelsAppId = "com.webos.app.lgchannels";

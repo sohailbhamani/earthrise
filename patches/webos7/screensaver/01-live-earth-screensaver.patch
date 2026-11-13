@@ -1,0 +1,444 @@
+diff --git a/UserInterfaceLayer/Containers/Clock.qml b/UserInterfaceLayer/Containers/Clock.qml
+index 94532c7..5deab9a 100755
+--- a/UserInterfaceLayer/Containers/Clock.qml
++++ b/UserInterfaceLayer/Containers/Clock.qml
+@@ -1,31 +1,20 @@
+-﻿/* @@@LICENSE
+-*
+-*      Copyright (c) 2019 LG Electronics, Inc.
+-*
+-* Confidential computer software. Valid license from LG required for
+-* possession, use or copying. Consistent with FAR 12.211 and 12.212,
+-* Commercial Computer Software, Computer Software Documentation, and
+-* Technical Data for Commercial Items are licensed to the U.S. Government
+-* under vendor's standard commercial license.
+-*
+-* LICENSE@@@ */
+-
++// krieger: minimal screensaver. A small live Earth, lit by the real sun with
++// tonight's clouds, and a quiet clock under it. It drifts to a new spot on every
++// loop so nothing sits still on the panel. Replaces LG's analog clock; keeps its
++// interface (playing, dataReady, looped, animation) so MainView drives it unchanged.
+ import QtQuick 2.12
+ import "../Components"
+ 
+ Item {
++    id: root
+ 
+-    id : root
+-
+-    readonly property int displayDurationTime: 5000
+     readonly property int mainFadeInOutTime: 3000
+-    readonly property int guideTextFadeInTime: 3000
+-    readonly property int infoFadeInOutTime: 500
++    readonly property int displayDurationTime: 24000
+ 
+     property int hours
+     property int minutes
+     property int seconds
+-    property string currentTime;
++    property string currentTime
+     property real shift
+     property bool isPartial: false
+     property string guideString: ""
+@@ -34,6 +23,13 @@ Item {
+     property bool dataReady: playing && root.timeUpdated
+     property alias animation: anim
+ 
++    // the home screen's fetcher keeps these fresh
++    readonly property string earthDir: "file:///usr/palm/applications/com.webos.app.home/qml/earth/"
++    property real lookLat: 35
++    property real lookLon: -110
++    property real globeSize: 400
++    property vector3d sunDir: sunVector(new Date())
++
+     signal looped()
+ 
+     onDataReadyChanged: {
+@@ -45,80 +41,29 @@ Item {
+         }
+     }
+ 
+-    SequentialAnimation {
++    function sunVector(d) {
++        var r = Math.PI / 180, n = d.getTime() / 86400000 + 2440587.5 - 2451545.0
++        var L = (280.46 + 0.9856474 * n) % 360, g = ((357.528 + 0.9856003 * n) % 360) * r
++        var lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * r, eps = 23.439 * r
++        var dec = Math.asin(Math.sin(eps) * Math.sin(lam))
++        var ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam))
++        var lon = ra - ((280.46061837 + 360.98564736629 * n) % 360) * r
++        return Qt.vector3d(Math.cos(dec) * Math.cos(lon), Math.cos(dec) * Math.sin(lon), Math.sin(dec))
++    }
++    function unit(lat, lon) {
++        var a = lat * Math.PI / 180, b = lon * Math.PI / 180
++        return Qt.vector3d(Math.cos(a) * Math.cos(b), Math.cos(a) * Math.sin(b), Math.sin(a))
++    }
++    function hm(d) {
++        var h = d.getHours() % 12
++        return (h === 0 ? 12 : h) + ":" + ("0" + d.getMinutes()).slice(-2)
++    }
+ 
++    SequentialAnimation {
+         id: anim
+-
+-        PropertyAnimation {
+-            target: mask
+-            properties: "opacity"
+-            from: 1
+-            to: 0
+-            duration: mainFadeInOutTime
+-        }
+-
+-        PauseAnimation {
+-            duration: displayDurationTime
+-        }
+-
+-        PropertyAnimation {
+-            target: dateTextArea
+-            properties: "opacity"
+-            from: 1
+-            to: 0
+-            duration: infoFadeInOutTime
+-        }
+-
+-        PropertyAnimation {
+-            target: weatherArea
+-            properties: "opacity"
+-            from: 0
+-            to: 1
+-            duration: infoFadeInOutTime
+-        }
+-
+-        PauseAnimation {
+-            duration: displayDurationTime
+-        }
+-
+-        ParallelAnimation {
+-            PropertyAnimation {
+-                target: weatherArea
+-                properties: "opacity"
+-                from: 1
+-                to: 0
+-                duration: infoFadeInOutTime
+-            }
+-
+-            PropertyAnimation {
+-                target: clockShape
+-                properties: "opacity"
+-                from: 1
+-                to: 0
+-                duration: infoFadeInOutTime
+-            }
+-        }
+-
+-        PropertyAnimation {
+-            target: screenSaverText
+-            properties: "opacity"
+-            from: 0
+-            to: 1
+-            duration: guideTextFadeInTime
+-        }
+-
+-        PauseAnimation {
+-            duration: displayDurationTime
+-        }
+-
+-        PropertyAnimation {
+-            target: mask
+-            properties: "opacity"
+-            from: 0
+-            to: 1
+-            duration: mainFadeInOutTime
+-        }
+-
++        PropertyAnimation { target: mask; properties: "opacity"; from: 1; to: 0; duration: mainFadeInOutTime }
++        PauseAnimation { duration: displayDurationTime }
++        PropertyAnimation { target: mask; properties: "opacity"; from: 0; to: 1; duration: mainFadeInOutTime }
+         onRunningChanged: {
+             if (!running) {
+                 looped();
+@@ -126,148 +71,132 @@ Item {
+         }
+     }
+ 
+-    Item {
+-
+-        id: clockMain
++    Rectangle { anchors.fill: parent; color: "black" }
+ 
+-        width: parent.width
+-        height: childrenRect.height
+-        anchors.centerIn: parent
++    Column {
++        id: group
++        spacing: 34
++        // a new random spot each loop (MainView reloads this component every loop)
++        x: Math.random() * (root.width - width)
++        y: Math.random() * (root.height - height)
+ 
+         Item {
+-
+-            id: clockShape
+-
+-            anchors.top: !displayUpperArea ? parent.top : undefined
+-            anchors.bottom: displayUpperArea ? parent.bottom : undefined
+-            anchors.horizontalCenter: parent.horizontalCenter
+-
+-            width: 420
+-            height: 420
+-
+-            Image {
+-                id: second
+-
+-                anchors.centerIn: parent
+-                source: "../Components/images/2k/screensaver_clock_bg.png"
+-                antialiasing: true
+-                smooth: true
+-
+-                RotationAnimation on rotation {
+-                    from: 0;
+-                    to: 360;
+-                    running: true
+-                    loops: Animation.Infinite
+-                    direction: RotationAnimation.Clockwise
+-                    duration: 3000
+-                }
++            width: root.globeSize + 60; height: root.globeSize + 60
++
++            Image { id: earthImg; source: root.earthDir + "earth.jpg"; sourceSize: Qt.size(1808, 1808); asynchronous: true; visible: false }
++            Image { id: dayImg; source: root.earthDir + "day.jpg"; sourceSize: Qt.size(2048, 1024); asynchronous: true; visible: false }
++            Image { id: nightImg; source: root.earthDir + "night.jpg"; sourceSize: Qt.size(2048, 1024); asynchronous: true; visible: false }
++
++            ShaderEffect {
++                id: prettyGlobe
++                anchors.fill: parent
++                visible: dayImg.status === Image.Ready && nightImg.status === Image.Ready
++                layer.enabled: true
++                // camera far out over lookLat/lookLon, the globe fills globeSize
++                readonly property real dist: 8.0
++                property variant dayTex: dayImg
++                property variant nightTex: nightImg
++                property variant cloudTex: earthImg
++                property real cloudsOn: earthImg.status === Image.Ready ? 1.0 : 0.0
++                property vector3d sun: root.sunDir
++                property vector3d camC: root.unit(root.lookLat, root.lookLon).times(dist)
++                property vector3d camF: camC.times(-1).normalized()
++                property vector3d camR: camF.crossProduct(Qt.vector3d(0, 0, 1)).normalized()
++                property vector3d camU: camR.crossProduct(camF)
++                property real focal: (root.globeSize / 2) / Math.tan(Math.asin(1 / dist))
++                property point pp: Qt.point(width / 2, height / 2)
++                property size res: Qt.size(width, height)
++        fragmentShader: "
++            #ifdef GL_FRAGMENT_PRECISION_HIGH
++            precision highp float;
++            #else
++            precision mediump float;
++            #endif
++            varying vec2 qt_TexCoord0;
++            uniform sampler2D dayTex; uniform sampler2D nightTex; uniform sampler2D cloudTex;
++            uniform float cloudsOn; uniform vec3 sun;
++            uniform float qt_Opacity;
++            uniform vec3 camC; uniform vec3 camR; uniform vec3 camU; uniform vec3 camF;
++            uniform float focal; uniform vec2 pp; uniform vec2 res;
++            const float PI = 3.14159265;
++            const float H = 6.61073;          // GOES orbit radius in Earth radii
++            const float LON0 = -2.39459;       // GOES-West sub-point, -137.2 deg
++            const float AMAX = 0.151872;       // full-disk scan half-angle
++            // clouds out of GeoColor: white-ish and unsaturated (city lights and land are not)
++            float cloudAlpha(vec2 uv) {
++                vec3 c = texture2D(cloudTex, uv).rgb;
++                float mn = min(c.r, min(c.g, c.b)), mx = max(c.r, max(c.g, c.b));
++                return smoothstep(0.22, 0.65, mn) * (1.0 - smoothstep(0.10, 0.35, mx - mn));
+             }
+-
+-            Image {
+-
+-                id: hourShape
+-
+-                property real hourAngle: (root.hours + root.minutes / 60) * 30
+-
+-                Behavior on hourAngle {
+-
+-                    enabled: timeUpdated
+-
+-                    RotationAnimation { direction: RotationAnimation.Clockwise; duration: 100 }
++            void main() {
++                vec2 px = qt_TexCoord0 * res;
++                vec3 d = normalize(camR * (px.x - pp.x) + camU * (pp.y - px.y) + camF * focal);
++                float b = dot(camC, d);
++                float disc = b * b - (dot(camC, camC) - 1.0);
++                if (disc < 0.0) {
++                    float miss = sqrt(dot(camC, camC) - b * b) - 1.0;
++                    float lit = smoothstep(-0.3, 0.4, dot(normalize(camC - d * b), sun));
++                    float g = max(0.0, 1.0 - miss / 0.04);
++                    float a = g * g * (0.25 + 0.6 * lit);
++                    gl_FragColor = vec4(0.35, 0.63, 1.0, 1.0) * a * qt_Opacity;
++                    return;
+                 }
+-
+-                anchors.centerIn: parent
+-                source: "../Components/images/2k/screensaver_clock_arm_hour.png"
+-                transformOrigin: Item.Center
+-                rotation: hourAngle
+-                antialiasing: true
+-                smooth: true
+-            }
+-
+-            Image {
+-
+-                id: minuteShape
+-
+-                property real minuteAngle: (root.minutes + root.seconds / 60) * 6
+-
+-                Behavior on minuteAngle {
+-
+-                    enabled: timeUpdated
+-
+-                    RotationAnimation { direction: RotationAnimation.Clockwise; duration: 100 }
++                vec3 p = camC + d * (-b - sqrt(disc));
++                float lat = asin(clamp(p.z, -1.0, 1.0));
++                float lon = atan(p.y, p.x);
++                vec2 uv = vec2(lon / (2.0 * PI) + 0.5, 0.5 - lat / PI);
++                vec3 day = texture2D(dayTex, uv).rgb;
++                vec3 night = texture2D(nightTex, uv).rgb;
++                float ocean = (day.r < 0.15 && day.b * 0.6 > day.r) ? 1.0 : 0.0;
++                day = mix(day, vec3(0.04, 0.16, 0.36), ocean * vec3(0.5, 0.6, 0.7));
++                float sd = dot(p, sun);
++                float dayW = smoothstep(-0.08, 0.12, sd);
++                float light = 0.35 + 0.75 * clamp(sd, 0.0, 1.0);
++                vec3 col = mix(night * vec3(1.45, 1.26, 0.99), day * light, dayW);
++                float dl = lon - LON0;
++                vec3 n = vec3(cos(lat) * cos(dl), cos(lat) * sin(dl), sin(lat));
++                float cs = dot(n, normalize(vec3(H - n.x, -n.y, -n.z)));
++                if (cloudsOn > 0.5 && cs > 0.0) {
++                    vec3 s3 = vec3(H - n.x, -n.y, n.z);
++                    vec2 cuv = vec2((asin(-s3.y / length(s3)) / AMAX + 1.0) * 0.5, (1.0 - atan(s3.z / s3.x) / AMAX) * 0.5);
++                    float e = 1.0 / 1808.0;
++                    float a = (2.0 * cloudAlpha(cuv) + cloudAlpha(cuv + vec2(e, 0.0)) + cloudAlpha(cuv - vec2(e, 0.0))
++                               + cloudAlpha(cuv + vec2(0.0, e)) + cloudAlpha(cuv - vec2(0.0, e))) / 6.0;
++                    a *= smoothstep(0.04, 0.26, cs);
++                    vec3 cloud = mix(vec3(0.20, 0.23, 0.32), vec3(0.97, 0.98, 1.0), dayW) * (0.6 + 0.4 * light);
++                    col = mix(col, cloud, a);
+                 }
+-
+-                anchors.centerIn: parent
+-                source: "../Components/images/2k/screensaver_clock_arm_min.png"
+-                transformOrigin: Item.Center
+-                rotation: minuteAngle
+-                antialiasing: true
+-                smooth: true
++                float haze = pow(1.0 - max(0.0, -dot(d, p)), 3.0) * (0.25 + 0.5 * dayW);
++                float dusk = smoothstep(0.0, 0.08, sd) * (1.0 - smoothstep(0.08, 0.25, sd)) * 0.25;
++                col = mix(col, vec3(0.35, 0.6, 1.0), haze) + dusk * vec3(0.9, 0.45, 0.2);
++                gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0) * qt_Opacity;
++            }"
+             }
+         }
+ 
+-        Item {
+-
+-            id: dateArea
+-
+-            width: parent.width - 132
+-            height: 40
+-            anchors.top: !displayUpperArea ? clockShape.bottom : undefined
+-            anchors.topMargin: !displayUpperArea ? 100 : 0
+-            anchors.bottom: displayUpperArea ? clockShape.top : undefined
+-            anchors.bottomMargin: displayUpperArea ? 100 : 0
++        Text {
+             anchors.horizontalCenter: parent.horizontalCenter
+-
+-            Text {
+-
+-                id: dateTextArea
+-
+-                anchors.centerIn: parent
+-                text: currentTime
+-                color: "#808080"
+-                wrapMode: Text.Wrap
+-                horizontalAlignment: Text.AlignHCenter
+-                font.family:  fontManager.smart_Regular.family
+-                font.weight: fontManager.smart_Regular.weight
+-                font.pixelSize: 33 * (isPartial ? 0.8 : 1)
+-            }
++            id: timeText
++            text: root.hm(new Date())
++            color: "#d0d0d0"
++            font.pixelSize: 96
++            font.weight: Font.Light
+         }
+-
+-        // Note : weather is spec out so weatherArea is empty
+-        Item {
+-
+-            id: weatherArea
+-
+-            width: parent.width - 132
+-            height: 86
+-            anchors.top: !displayUpperArea ? clockShape.bottom : undefined
+-            anchors.topMargin: !displayUpperArea ? 100 : 0
+-            anchors.bottom: displayUpperArea ? clockShape.top : undefined
+-            anchors.bottomMargin: displayUpperArea ? 100 : 0
++        Text {
+             anchors.horizontalCenter: parent.horizontalCenter
+-            opacity: 0
++            text: currentTime
++            color: "#707070"
++            font.pixelSize: 28
++            font.letterSpacing: 2
+         }
+     }
+ 
+-    Text {
+-
+-        id: screenSaverText
+-
+-        width: parent.width - 104
+-        height: font.pixelSize * 3
+-        anchors.centerIn: parent
+-        text: guideString
+-        color: "#808080"
+-        opacity: 0
+-        wrapMode: Text.Wrap
+-        horizontalAlignment: Text.AlignHCenter
+-        font.family:  fontManager.smart_Regular.family
+-        font.weight: fontManager.smart_Regular.weight
+-        font.pixelSize: 33
++    Timer {
++        interval: 1000; running: root.visible; repeat: true
++        onTriggered: timeText.text = root.hm(new Date())
+     }
+ 
+     Rectangle {
+-
+         id: mask
+         anchors.fill: parent
+         color: "black"
+@@ -283,23 +212,12 @@ Item {
+     }
+ 
+     function updateTime () {
+-
+         if (!timeManager.isFactoryTime && timeManager.broadcastUtcTime) {
+-            // dateType: "date" or "time"
+-            // formatType: 1) Date: "d" /  "dm" / "dmw" / "dmwy"   2) Time: "a" / "ah" / "ahm" / "ahms"
+-            // formatLength: "short" / "medium" / "long" / "full"
+-
+-            if (!timeManager.isFactoryTime && timeManager.broadcastUtcTime) {
+-                currentTime = timeManager.dateTimeFormat(timeManager.broadcastUtcTime, "date", "dmy", "full");
+-            } else {
+-                currentTime = ""
+-            }
+-
+-            hours = timeManager.broadcastUtcTime.getUTCHours() % 12;
+-            minutes = timeManager.broadcastUtcTime.getUTCMinutes() % 60;
+-            seconds = timeManager.broadcastUtcTime.getUTCSeconds() % 60;
++            currentTime = timeManager.dateTimeFormat(timeManager.broadcastUtcTime, "date", "dmw", "full");
++        } else {
++            currentTime = Qt.formatDate(new Date(), "dddd, MMMM d");
+         }
+-
++        sunDir = sunVector(new Date());
+         timeUpdated = true;
+     }
+ }

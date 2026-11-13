@@ -1,0 +1,417 @@
+diff --git a/UserInterfaceLayer/Containers/EarthClock.qml b/UserInterfaceLayer/Containers/EarthClock.qml
+new file mode 100644
+index 0000000..160b6cc
+--- /dev/null
++++ b/UserInterfaceLayer/Containers/EarthClock.qml
+@@ -0,0 +1,393 @@
++// krieger: home screen Earth clock. The live GOES-West picture curved into a
++// low-orbit view of home, with the clock, today's weather and the next 8 hours.
++// earthfetch-k.sh keeps earth/earth.jpg and earth/weather.json fresh.
++import QtQuick 2.12
++
++Item {
++    id: root
++
++    property real homeLat: 39.74   // set to your home
++    property real homeLon: -104.99  // set to your home
++    property string homeName: "Denver"   // label on the pin and under the weather
++    // camera: east of home and a little south, this many Earth radii up, looking at home
++    property real camLat: homeLat - 3.5
++    property real camLon: homeLon + 24
++    property real camAlt: 1.2
++    property real fovDeg: 50
++    property point homeOnScreen: Qt.point(1400, 470)
++
++    // "pretty": NASA day map + night lights, lit by the real sun, live clouds on top
++    // "geocolor": NOAA's GOES-West GeoColor picture as it comes
++    property string style: "pretty"
++    property string earthUrl: Qt.resolvedUrl("../../earth/earth.jpg")
++    property string dayUrl: Qt.resolvedUrl("../../earth/day.jpg")
++    property string nightUrl: Qt.resolvedUrl("../../earth/night.jpg")
++    property vector3d sunDir: sunVector(new Date())
++    property string weatherUrl: Qt.resolvedUrl("../../earth/weather.json")
++    property real stamp: 0
++    property real imgStamp: 0
++    property var wx: null
++
++    // ---- camera maths (same as the mockup) ----
++    function unit(lat, lon) {
++        var a = lat * Math.PI / 180, b = lon * Math.PI / 180
++        return Qt.vector3d(Math.cos(a) * Math.cos(b), Math.cos(a) * Math.sin(b), Math.sin(a))
++    }
++    readonly property vector3d camPos: unit(camLat, camLon).times(1 + camAlt)
++    readonly property vector3d camFwd: unit(homeLat, homeLon).minus(camPos).normalized()
++    readonly property vector3d camRight: camFwd.crossProduct(Qt.vector3d(0, 0, 1)).normalized()
++    readonly property vector3d camUp: camRight.crossProduct(camFwd)
++    readonly property real focal: (width / 2) / Math.tan(fovDeg * Math.PI / 360)
++
++    function project(p) {
++        var v = p.minus(camPos), z = v.dotProduct(camFwd)
++        return Qt.point(homeOnScreen.x + v.dotProduct(camRight) / z * focal,
++                        homeOnScreen.y - v.dotProduct(camUp) / z * focal)
++    }
++
++    function hm(d) {
++        var h = d.getHours() % 12
++        return (h === 0 ? 12 : h) + ":" + ("0" + d.getMinutes()).slice(-2)
++    }
++
++    // subsolar point, NOAA's low-precision formula (good to a fraction of a degree)
++    function sunVector(d) {
++        var r = Math.PI / 180, n = d.getTime() / 86400000 + 2440587.5 - 2451545.0
++        var L = (280.46 + 0.9856474 * n) % 360, g = ((357.528 + 0.9856003 * n) % 360) * r
++        var lam = (L + 1.915 * Math.sin(g) + 0.02 * Math.sin(2 * g)) * r, eps = 23.439 * r
++        var dec = Math.asin(Math.sin(eps) * Math.sin(lam))
++        var ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam))
++        var lon = ra - ((280.46061837 + 360.98564736629 * n) % 360) * r
++        return Qt.vector3d(Math.cos(dec) * Math.cos(lon), Math.cos(dec) * Math.sin(lon), Math.sin(dec))
++    }
++
++    // ---- weather ----
++    function loadWeather() {
++        var xhr = new XMLHttpRequest()
++        xhr.onreadystatechange = function() {
++            if (xhr.readyState !== XMLHttpRequest.DONE || !xhr.responseText) return
++            try { wx = JSON.parse(xhr.responseText) } catch (e) {}
++        }
++        xhr.open("GET", weatherUrl + "?t=" + stamp)
++        xhr.send()
++    }
++    function icon(code, day) {
++        if (code === 0) return day ? "☀" : "☾"
++        if (code <= 2) return day ? "⛅" : "☁"
++        if (code === 3) return "☁"
++        if (code <= 48) return "≋"
++        if (code <= 67 || (code >= 80 && code <= 82)) return "☂"
++        if (code <= 77 || code === 85 || code === 86) return "❄"
++        return "⚡"
++    }
++    function label(code) {
++        if (code === 0) return "Clear"
++        if (code <= 2) return "Partly cloudy"
++        if (code === 3) return "Cloudy"
++        if (code <= 48) return "Fog"
++        if (code <= 57) return "Drizzle"
++        if (code <= 67 || (code >= 80 && code <= 82)) return "Rain"
++        if (code <= 77 || code === 85 || code === 86) return "Snow"
++        return "Storms"
++    }
++    property var hours: {
++        if (!wx || !wx.hourly) return []
++        var now = new Date(), out = [], h = wx.hourly
++        var first = -1
++        for (var i = 0; i < h.time.length && out.length < 8; i++) {
++            var t = new Date(h.time[i])
++            if (t.getTime() + 3600000 <= now.getTime()) continue
++            if (first < 0) first = i
++            if ((i - first) % 2 !== 0) continue   // every 2 hours
++            var hr = t.getHours()
++            out.push({ name: out.length === 0 ? "Now" : (hr % 12 === 0 ? 12 : hr % 12) + (hr < 12 ? "AM" : "PM"),
++                       icon: icon(h.weather_code[i], h.is_day[i] === 1),
++                       temp: Math.round(h.temperature_2m[i]),
++                       rain: Math.round(h.precipitation_probability[i]) })   // numbers only, never markup
++        }
++        return out
++    }
++
++    property var days: {
++        if (!wx || !wx.daily) return []
++        var d = wx.daily, out = [], names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
++        for (var i = 0; i < d.time.length && out.length < 7; i++) {
++            var t = new Date(d.time[i] + "T12:00:00")
++            out.push({ name: i === 0 ? "Today" : names[t.getDay()],
++                       icon: icon(d.weather_code[i], true),
++                       hi: Math.round(d.temperature_2m_max[i]),
++                       lo: Math.round(d.temperature_2m_min[i]),
++                       rain: Math.round(d.precipitation_probability_max[i]) })
++        }
++        return out
++    }
++
++    Timer {
++        interval: 5 * 60 * 1000; running: root.visible; repeat: true; triggeredOnStart: true
++        onTriggered: { root.stamp = Date.now(); root.loadWeather() }
++    }
++    Timer {
++        interval: 5 * 60 * 1000; running: root.visible; repeat: true; triggeredOnStart: true
++        onTriggered: { root.imgStamp = Date.now(); root.sunDir = root.sunVector(new Date()) }
++    }
++
++    // ---- the Earth ----
++    Image {
++        id: earthImg
++        source: root.earthUrl + "?t=" + root.imgStamp
++        sourceSize: Qt.size(1808, 1808)
++        cache: false
++        asynchronous: true
++        visible: false
++    }
++
++    Image { id: dayImg; source: root.dayUrl; sourceSize: Qt.size(2048, 1024); asynchronous: true; visible: false }
++    Image { id: nightImg; source: root.nightUrl; sourceSize: Qt.size(2048, 1024); asynchronous: true; visible: false }
++
++    ShaderEffect {
++        id: prettyGlobe
++        anchors.fill: parent
++        visible: root.style === "pretty" && dayImg.status === Image.Ready && nightImg.status === Image.Ready
++        layer.enabled: true
++        property variant dayTex: dayImg
++        property variant nightTex: nightImg
++        property variant cloudTex: earthImg
++        property real cloudsOn: earthImg.status === Image.Ready ? 1.0 : 0.0
++        property vector3d sun: root.sunDir
++        property vector3d camC: root.camPos
++        property vector3d camR: root.camRight
++        property vector3d camU: root.camUp
++        property vector3d camF: root.camFwd
++        property real focal: root.focal
++        property point pp: root.homeOnScreen
++        property size res: Qt.size(width, height)
++        fragmentShader: "
++            #ifdef GL_FRAGMENT_PRECISION_HIGH
++            precision highp float;
++            #else
++            precision mediump float;
++            #endif
++            varying vec2 qt_TexCoord0;
++            uniform sampler2D dayTex; uniform sampler2D nightTex; uniform sampler2D cloudTex;
++            uniform float cloudsOn; uniform vec3 sun;
++            uniform float qt_Opacity;
++            uniform vec3 camC; uniform vec3 camR; uniform vec3 camU; uniform vec3 camF;
++            uniform float focal; uniform vec2 pp; uniform vec2 res;
++            const float PI = 3.14159265;
++            const float H = 6.61073;          // GOES orbit radius in Earth radii
++            const float LON0 = -2.39459;       // GOES-West sub-point, -137.2 deg
++            const float AMAX = 0.151872;       // full-disk scan half-angle
++            // clouds out of GeoColor: white-ish and unsaturated (city lights and land are not)
++            float cloudAlpha(vec2 uv) {
++                vec3 c = texture2D(cloudTex, uv).rgb;
++                float mn = min(c.r, min(c.g, c.b)), mx = max(c.r, max(c.g, c.b));
++                return smoothstep(0.22, 0.65, mn) * (1.0 - smoothstep(0.10, 0.35, mx - mn));
++            }
++            void main() {
++                vec2 px = qt_TexCoord0 * res;
++                vec3 d = normalize(camR * (px.x - pp.x) + camU * (pp.y - px.y) + camF * focal);
++                float b = dot(camC, d);
++                float disc = b * b - (dot(camC, camC) - 1.0);
++                if (disc < 0.0) {
++                    float miss = sqrt(dot(camC, camC) - b * b) - 1.0;
++                    float lit = smoothstep(-0.3, 0.4, dot(normalize(camC - d * b), sun));
++                    float g = max(0.0, 1.0 - miss / 0.04);
++                    float a = g * g * (0.25 + 0.6 * lit);
++                    gl_FragColor = vec4(0.35, 0.63, 1.0, 1.0) * a * qt_Opacity;
++                    return;
++                }
++                vec3 p = camC + d * (-b - sqrt(disc));
++                float lat = asin(clamp(p.z, -1.0, 1.0));
++                float lon = atan(p.y, p.x);
++                vec2 uv = vec2(lon / (2.0 * PI) + 0.5, 0.5 - lat / PI);
++                vec3 day = texture2D(dayTex, uv).rgb;
++                vec3 night = texture2D(nightTex, uv).rgb;
++                float ocean = (day.r < 0.15 && day.b * 0.6 > day.r) ? 1.0 : 0.0;
++                day = mix(day, vec3(0.04, 0.16, 0.36), ocean * vec3(0.5, 0.6, 0.7));
++                float sd = dot(p, sun);
++                float dayW = smoothstep(-0.08, 0.12, sd);
++                float light = 0.35 + 0.75 * clamp(sd, 0.0, 1.0);
++                vec3 col = mix(night * vec3(1.45, 1.26, 0.99), day * light, dayW);
++                float dl = lon - LON0;
++                vec3 n = vec3(cos(lat) * cos(dl), cos(lat) * sin(dl), sin(lat));
++                float cs = dot(n, normalize(vec3(H - n.x, -n.y, -n.z)));
++                if (cloudsOn > 0.5 && cs > 0.0) {
++                    vec3 s3 = vec3(H - n.x, -n.y, n.z);
++                    vec2 cuv = vec2((asin(-s3.y / length(s3)) / AMAX + 1.0) * 0.5, (1.0 - atan(s3.z / s3.x) / AMAX) * 0.5);
++                    float e = 1.0 / 1808.0;
++                    float a = (2.0 * cloudAlpha(cuv) + cloudAlpha(cuv + vec2(e, 0.0)) + cloudAlpha(cuv - vec2(e, 0.0))
++                               + cloudAlpha(cuv + vec2(0.0, e)) + cloudAlpha(cuv - vec2(0.0, e))) / 6.0;
++                    a *= smoothstep(0.04, 0.26, cs);
++                    vec3 cloud = mix(vec3(0.20, 0.23, 0.32), vec3(0.97, 0.98, 1.0), dayW) * (0.6 + 0.4 * light);
++                    col = mix(col, cloud, a);
++                }
++                float haze = pow(1.0 - max(0.0, -dot(d, p)), 3.0) * (0.25 + 0.5 * dayW);
++                float dusk = smoothstep(0.0, 0.08, sd) * (1.0 - smoothstep(0.08, 0.25, sd)) * 0.25;
++                col = mix(col, vec3(0.35, 0.6, 1.0), haze) + dusk * vec3(0.9, 0.45, 0.2);
++                gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0) * qt_Opacity;
++            }"
++    }
++
++    ShaderEffect {
++        id: globe
++        anchors.fill: parent
++        visible: root.style === "geocolor" && earthImg.status === Image.Ready
++        layer.enabled: true   // render once, re-render only when inputs change
++        property variant src: earthImg
++        property vector3d camC: root.camPos
++        property vector3d camR: root.camRight
++        property vector3d camU: root.camUp
++        property vector3d camF: root.camFwd
++        property real focal: root.focal
++        property point pp: root.homeOnScreen
++        property size res: Qt.size(width, height)
++        fragmentShader: "
++            #ifdef GL_FRAGMENT_PRECISION_HIGH
++            precision highp float;
++            #else
++            precision mediump float;
++            #endif
++            varying vec2 qt_TexCoord0;
++            uniform sampler2D src;
++            uniform float qt_Opacity;
++            uniform vec3 camC; uniform vec3 camR; uniform vec3 camU; uniform vec3 camF;
++            uniform float focal; uniform vec2 pp; uniform vec2 res;
++            const float H = 6.61073;          // GOES orbit radius in Earth radii
++            const float LON0 = -2.39459;       // GOES-West sub-point, -137.2 deg
++            const float AMAX = 0.151872;       // full-disk scan half-angle
++            void main() {
++                vec2 px = qt_TexCoord0 * res;
++                vec3 d = normalize(camR * (px.x - pp.x) + camU * (pp.y - px.y) + camF * focal);
++                float b = dot(camC, d);
++                float disc = b * b - (dot(camC, camC) - 1.0);
++                if (disc < 0.0) {
++                    float miss = sqrt(dot(camC, camC) - b * b) - 1.0;
++                    float g = max(0.0, 1.0 - miss / 0.035);
++                    float a = g * g * 0.7;
++                    gl_FragColor = vec4(0.35, 0.59, 1.0, 1.0) * a * qt_Opacity;
++                    return;
++                }
++                vec3 p = camC + d * (-b - sqrt(disc));
++                float lat = asin(clamp(p.z, -1.0, 1.0));
++                float dl = atan(p.y, p.x) - LON0;
++                vec3 n = vec3(cos(lat) * cos(dl), cos(lat) * sin(dl), sin(lat));
++                vec3 s = vec3(H - n.x, -n.y, n.z);
++                vec3 toSat = vec3(H - n.x, -n.y, -n.z);
++                float cs = dot(n, normalize(toSat));
++                vec3 night = vec3(0.02, 0.035, 0.08);
++                vec3 col = night;
++                if (cs > 0.0) {
++                    float y = atan(s.z / s.x);
++                    float x = asin(-s.y / length(s));
++                    vec2 uv = vec2((x / AMAX + 1.0) * 0.5, (1.0 - y / AMAX) * 0.5);
++                    float k = smoothstep(0.04, 0.26, cs);
++                    col = mix(night, texture2D(src, uv).rgb, k);
++                }
++                float haze = pow(1.0 - max(0.0, -dot(d, p)), 4.0) * 0.8;
++                col = mix(col, vec3(0.31, 0.55, 1.0), haze);
++                gl_FragColor = vec4(col, 1.0) * qt_Opacity;
++            }"
++    }
++
++    // ---- home pin ----
++    Item {
++        property point at: root.project(root.unit(root.homeLat, root.homeLon))
++        x: at.x; y: at.y
++        visible: globe.visible || prettyGlobe.visible
++        Rectangle { width: 46; height: 46; radius: 23; x: -23; y: -23; color: "#40ffd36b" }
++        Rectangle { width: 14; height: 14; radius: 7; x: -7; y: -7; color: "#ffd36b" }
++        Text {
++            x: 22; y: -16
++            text: root.homeName.toUpperCase()
++            color: "white"; opacity: 0.85
++            font.pixelSize: 24; font.letterSpacing: 3
++            style: Text.Raised; styleColor: "#80000000"
++        }
++    }
++
++    // ---- clock + weather ----
++    Column {
++        x: 110; y: 60
++        spacing: 6
++        Text {
++            id: clock
++            leftPadding: 22   // line up with the text inside the forecast boxes
++            color: "white"
++            font.pixelSize: 170; font.weight: Font.Light
++            style: Text.Raised; styleColor: "#60000000"
++            text: root.hm(new Date())
++        }
++        Text {
++            id: dateLine
++            leftPadding: 26
++            color: "white"; opacity: 0.85
++            font.pixelSize: 38; font.weight: Font.Light
++            text: Qt.formatDate(new Date(), "dddd, MMMM d")
++        }
++        Row {
++            visible: !!root.wx && !!root.wx.current
++            spacing: 20
++            leftPadding: 24
++            topPadding: 18
++            Text {
++                color: "white"; font.pixelSize: 64; font.weight: Font.Light
++                text: root.wx && root.wx.current ? root.icon(root.wx.current.weather_code, root.wx.current.is_day === 1) + " " + Math.round(root.wx.current.temperature_2m) + "°" : ""
++            }
++            Text {
++                anchors.verticalCenter: parent.verticalCenter
++                color: "white"; opacity: 0.8; font.pixelSize: 30; font.weight: Font.Light
++                text: root.wx && root.wx.daily ? root.label(root.wx.current.weather_code) + " · H " + Math.round(root.wx.daily.temperature_2m_max[0]) + "° L " + Math.round(root.wx.daily.temperature_2m_min[0]) + "°\n" + root.homeName : ""
++            }
++        }
++        Rectangle {
++            visible: root.hours.length > 0
++            width: hourRow.width + 20; height: hourRow.height + 20
++            radius: 18
++            color: "#59101626"; border.color: "#1fffffff"
++            Row {
++                id: hourRow
++                x: 10; y: 10
++                Repeater {
++                    model: root.hours
++                    Column {
++                        width: 80
++                        Text { width: 80; horizontalAlignment: Text.AlignHCenter; color: "white"; opacity: 0.7; font.pixelSize: 20; text: modelData.name }
++                        Text { width: 80; horizontalAlignment: Text.AlignHCenter; color: "white"; font.pixelSize: 26; text: modelData.icon }
++                        Text { width: 80; horizontalAlignment: Text.AlignHCenter; color: "white"; font.pixelSize: 28; font.weight: Font.Light; text: modelData.temp + "°" }
++                        Text { width: 80; horizontalAlignment: Text.AlignHCenter; color: "#8fc2ff"; font.pixelSize: 17; text: modelData.rain + "%" }
++                    }
++                }
++            }
++        }
++        Rectangle {
++            visible: root.days.length > 0
++            width: dayRow.width + 20; height: dayRow.height + 20
++            radius: 18
++            color: "#59101626"; border.color: "#1fffffff"
++            Row {
++                id: dayRow
++                x: 10; y: 10
++                Repeater {
++                    model: root.days
++                    Column {
++                        width: 91
++                        Text { width: 91; horizontalAlignment: Text.AlignHCenter; color: "white"; opacity: 0.7; font.pixelSize: 20; text: modelData.name }
++                        Text { width: 91; horizontalAlignment: Text.AlignHCenter; color: "white"; font.pixelSize: 26; text: modelData.icon }
++                        Text { width: 91; horizontalAlignment: Text.AlignHCenter; color: "white"; font.pixelSize: 26; font.weight: Font.Light; text: modelData.hi + "°" }
++                        Text { width: 91; horizontalAlignment: Text.AlignHCenter; color: "white"; opacity: 0.6; font.pixelSize: 22; font.weight: Font.Light; text: modelData.lo + "°" }
++                        Text { width: 91; horizontalAlignment: Text.AlignHCenter; color: "#8fc2ff"; font.pixelSize: 17; text: modelData.rain + "%" }
++                    }
++                }
++            }
++        }
++    }
++
++    Timer {
++        interval: 1000; running: root.visible; repeat: true
++        onTriggered: {
++            var now = new Date()
++            clock.text = root.hm(now)
++            dateLine.text = Qt.formatDate(now, "dddd, MMMM d")
++        }
++    }
++}
+diff --git a/UserInterfaceLayer/Containers/MainView.qml b/UserInterfaceLayer/Containers/MainView.qml
+index f65dedd..483bfb7 100644
+--- a/UserInterfaceLayer/Containers/MainView.qml
++++ b/UserInterfaceLayer/Containers/MainView.qml
+@@ -298,6 +298,13 @@ FocusScope {
+             visible: uiController.isFullHome && !uiController.isEditMode
+         }
+ 
++        // krieger: live Earth + clock + weather over the space background
++        EarthClock {
++            anchors.fill: parent
++            z: -1
++            visible: uiController.isFullHome && !uiController.isEditMode
++        }
++
+         Loader {
+ 
+             active: (systemProperties.isTopShelfGuide && !uiController.isEditMode) === true && uiController.isFullHome
