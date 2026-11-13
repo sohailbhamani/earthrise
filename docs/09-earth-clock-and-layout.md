@@ -2,7 +2,8 @@
 
 This round turns the webOS 7 home into a clock and weather screen. The app row
 moves to the bottom, and the space photo gets a live Earth in front of it. It's
-five patches on top of the webOS 7 set, three boot hooks and two scripts.
+four home patches on top of the webOS 7 set, one screensaver patch, three
+boot hooks and two scripts.
 Tested on the 43UQ7070ZUD (webOS 7.6, 1.3 GB RAM).
 
 ![home screen with the Earth clock](../assets/webos7-earth-clock.jpg)
