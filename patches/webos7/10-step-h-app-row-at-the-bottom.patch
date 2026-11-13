@@ -1,0 +1,35 @@
+diff --git a/UserInterfaceLayer/Containers/MainView.qml b/UserInterfaceLayer/Containers/MainView.qml
+index 483bfb7..9f43243 100644
+--- a/UserInterfaceLayer/Containers/MainView.qml
++++ b/UserInterfaceLayer/Containers/MainView.qml
+@@ -903,6 +903,7 @@ FocusScope {
+             x: 0
+             y: getHomeAppListAreaYPosition()
+             z: 1
++            Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } } // krieger: slide with the inputs row
+ 
+             visible: uiController.isEditMode && editMenu.state === "appEditPage" || !uiController.isEditMode
+             enabled: visible
+@@ -1074,7 +1075,8 @@ FocusScope {
+             property bool clickedGoToTopButton: false
+             property bool notExistRecommendCondition: topArea.count === 1
+             property bool homeDashboardInfirstPage : notExistRecommendCondition && (shelfListContainer.state === "app" || (shelfListContainer.state === "list" && shelfList.currentIndex === 0))
+-            property var shelfListY: (topArea.count === 1 && !interfaces.application.isDefaultShelfList) ?  topArea.y + topArea.height + appListArea.height + styleSheet.getRValue(85) : topArea.y + topArea.height + appListArea.height + styleSheet.getRValue(80)
++            property var shelfListY: appListArea.y + appListArea.height + styleSheet.getRValue(80) // krieger: below the bottom app row
++            property var shelfListYStock: (topArea.count === 1 && !interfaces.application.isDefaultShelfList) ?  topArea.y + topArea.height + appListArea.height + styleSheet.getRValue(85) : topArea.y + topArea.height + appListArea.height + styleSheet.getRValue(80)
+             signal shelfReady(var idx)
+ 
+             width: root.width
+@@ -2749,6 +2751,12 @@ FocusScope {
+     }
+ 
+     function getHomeAppListAreaYPosition() {
++        // krieger: app row sits at the bottom of the screen; inputs wait below it.
++        // Down arrow slides both up so the inputs row shows under the apps.
++        var bottom = root.height - appListArea.height - styleSheet.getRValue(70);
++        if (shelfList.activeFocus && shelfList.currentItem)
++            return bottom - shelfList.currentItem.height - styleSheet.getRValue(40);
++        return bottom;
+         if (topArea.contentHeight > 0) {
+             return topArea.y + topArea.height;
+         } else {
