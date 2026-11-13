@@ -1,8 +1,8 @@
 # webOS Home Lab
 
 Turn the home screen of a rooted LG TV into a clock and weather screen with a
-live view of Earth behind it. No ads, no promos, and a screensaver worth
-looking at.
+live view of Earth behind it. It removes LG's ads and promos and replaces the
+screensaver with a small spinning Earth.
 
 ![the home screen on webOS 7](assets/webos7-earth-clock.jpg)
 
@@ -47,8 +47,8 @@ Replace `<tv-ip>` below with your TV's address.
 ## Set it up (webOS 7)
 
 **1. Make a copy of LG's home screen on the TV,** then pull it to your
-computer. Make the copy on the TV, not on a Mac: macOS merges two folders whose
-names differ only in letter case, and one file gets lost.
+computer. Make the copy on the TV, not on a Mac: LG's files include two whose
+names differ only in letter case, and macOS keeps only one of them.
 
 ```sh
 ssh root@<tv-ip> 'mkdir -p /var/lib/webosbrew/homeqml-k && cp -a /usr/palm/applications/com.webos.app.home/qml /var/lib/webosbrew/homeqml-k/'
@@ -65,22 +65,24 @@ git apply ../patches/webos7/*.patch
 
 `01`-`07` clean up the home screen, `08` drops LG Channels, `09` adds the
 Earth clock, `10` moves the apps to the bottom, and `11` shrinks the input
-tiles. Apply only the ones you want.
+tiles. Later patches build on earlier ones, so apply them in order. To leave
+one out, run `git apply --check` on the ones after it first.
 
 The space background behind the Earth comes with the repo:
 
 ```sh
 cp ../assets/bg_space.jpg UserInterfaceLayer/Components/images/2k/bg_space.jpg
+cp ../assets/bg_space.jpg UserInterfaceLayer/Components/images/4k/bg_space.jpg
 ```
 
-**3. Set your town** in two places:
+**3. Set your town** in two places (paths from inside `stock-qml`):
 
-- `stock-qml/UserInterfaceLayer/Containers/EarthClock.qml`: `homeLat`,
-  `homeLon` and `homeName` (the pin and its label).
-- `scripts/earthfetch-k.sh`: `LAT` and `LON` (the weather).
+- `UserInterfaceLayer/Containers/EarthClock.qml`: `homeLat`, `homeLon` and
+  `homeName` (the pin and its label).
+- `../scripts/earthfetch-k.sh`: `LAT` and `LON` (the weather).
 
 **4. Push the changed files and install the hooks.** Send back only the files
-the patches touched, so the copy on the TV keeps its case-sensitive folders.
+the patches touched, so the copy on the TV keeps both of those files.
 
 ```sh
 (git diff --name-only HEAD; git ls-files --others --exclude-standard) \
@@ -110,7 +112,8 @@ ssh root@<tv-ip> 'cat > /var/lib/webosbrew/init.d/72-screensaver-k' < hooks/72-s
 ssh root@<tv-ip> 'chmod 755 /var/lib/webosbrew/init.d/72-screensaver-k && sh /var/lib/webosbrew/init.d/72-screensaver-k'
 ```
 
-It shows the next time the TV sits idle on the home screen.
+Reboot the TV once so a screensaver that already ran picks up the new file.
+After that it shows whenever the TV sits idle on the home screen.
 
 **6. Extras** (optional):
 
@@ -121,7 +124,12 @@ ssh -tt root@<tv-ip> "luna-send -n 1 luna://com.webos.service.eim/setDeviceInfo 
 
 For the soundbar, set `BAR` in `scripts/soundbar-k.sh` to your soundbar's
 Bluetooth address, then install it the same way as the weather fetcher: the
-script goes in `/var/lib/webosbrew/`, `hooks/80-soundbar-k` in `init.d/`.
+script goes in `/var/lib/webosbrew/`, `hooks/80-soundbar-k` in `init.d/`. To
+find the address:
+
+```sh
+ssh -tt root@<tv-ip> "luna-send -n 1 -f luna://com.webos.service.bluetooth2/device/getStatus '{}'"
+```
 
 The full details, including how the Earth is drawn, the data sources and their
 credits, are in
@@ -164,9 +172,8 @@ It uses about 30 MB of video memory.
 Other models use the same home app, but file names and image sizes vary, so
 check your own files before applying a patch.
 
-On webOS 4.5 and 6.x, apply that folder's patches the same way, then render the
-photo background with `scripts/render_home_bg.py` and install with
-`scripts/deploy.sh`.
+On webOS 4.5 and 6.x, apply that folder's patches the same way and follow the
+doc linked in the table. webOS 4.5 uses its own hook in `hooks/webos4.5/`.
 
 ## More docs
 
