@@ -1,92 +1,205 @@
-# webOS Home Screen Lab
+# Earthrise
 
-Reclaim the home screen on an LG webOS 4.5, 6.x or 7.x TV you own: drop the ads, promos,
-"Start a new experience" filler and unused tiles, put a full-screen photo
-behind everything, and make the input tiles dark so they sit on it.
+Turn the home screen of a rooted LG TV into a clock and weather screen with a
+live view of Earth behind it. It removes LG's ads and promos and replaces the
+screensaver with a small spinning Earth.
 
-> Not affiliated with LG. For a TV you own. No exploit here, no warranty. See [NOTICE.md](NOTICE.md).
+![the home screen on webOS 7](assets/webos7-earth-clock.jpg)
 
-This is a customization guide for a TV you own. It has no exploit code. Rooting
-is done with the public community tools linked in
-[`docs/01-rooting.md`](docs/01-rooting.md), and everything in this repo runs
-after the TV is already rooted.
+> Not affiliated with LG. For a TV you own. No exploit code, no warranty. See
+> [NOTICE.md](NOTICE.md).
+
+## What you get
+
+On webOS 7 (2022 models):
+
+- **Clock and weather.** Big 12-hour clock, the date, current weather, the
+  next 16 hours in 2-hour steps and a 7-day forecast.
+- **A live Earth.** NASA's Blue Marble, lit by the real sun for the current
+  minute, with city lights on the night side and clouds from NOAA's GOES-West
+  satellite, refreshed every 15 minutes. A pin marks your town.
+- **A cleaner home.** No ads, no LG Channels, no "Start a new experience"
+  filler. Your apps sit in one row at the bottom. The input tiles (HDMI, Live
+  TV, AirPlay) are small and wait below the screen until you press down.
+- **A new screensaver.** A small spinning Earth with a quiet clock on black. It
+  moves to a new spot every 30 seconds so nothing burns in.
+- **Extras.** Rename an input (HDMI 1 to "PS5"). Reconnect a Bluetooth soundbar
+  every time the TV turns on.
+
+Everything runs on the TV. No computer, server or account is needed after
+setup.
+
+![the screensaver](assets/webos7-screensaver.jpg)
+
+On webOS 4.5 and 6.x you get the cleanup and a full-screen photo background
+(the patches stop at `07`). See [Tested TVs](#tested-tvs).
+
+## Before you start
+
+- **The TV is rooted** and you can SSH in as root. This repo starts after that.
+  [`docs/01-rooting.md`](docs/01-rooting.md) links the public community tools.
+- **Auto-updates are off.** An update can undo root. The rooting tools include
+  an update blocker.
+- **You have `git` and `ssh`** on your computer.
+
+Replace `<tv-ip>` below with your TV's address. Run the commands from the repo
+folder.
+
+## Set it up (webOS 7)
+
+**1. Make a copy of LG's home screen on the TV,** then pull it to your
+computer. Make the copy on the TV, not on a Mac: LG's files include two whose
+names differ only in letter case, and macOS keeps only one of them.
+
+```sh
+ssh root@<tv-ip> 'mkdir -p /var/lib/webosbrew/homeqml-k && cp -a /usr/palm/applications/com.webos.app.home/qml /var/lib/webosbrew/homeqml-k/'
+mkdir stock-qml && ssh root@<tv-ip> 'tar -C /var/lib/webosbrew/homeqml-k/qml -cf - .' | tar -C stock-qml -xf -
+```
+
+**2. Apply the patches** to your local copy:
+
+```sh
+cd stock-qml
+git init -q && git add -A && git -c user.name=me -c user.email=me@localhost commit -qm stock   # so you can see and undo every change
+git apply ../patches/webos7/*.patch
+```
+
+`01`-`07` clean up the home screen, `08` drops LG Channels, `09` adds the
+Earth clock, `10` moves the apps to the bottom, and `11` shrinks the input
+tiles. Later patches build on earlier ones, so apply them in order. To leave
+one out, run `git apply --check` on the ones after it first.
+
+The space background behind the Earth comes with the repo:
+
+```sh
+cp ../assets/bg_space.jpg UserInterfaceLayer/Components/images/2k/bg_space.jpg
+cp ../assets/bg_space.jpg UserInterfaceLayer/Components/images/4k/bg_space.jpg
+```
+
+**3. Set your town** in two places (paths from inside `stock-qml`):
+
+- `UserInterfaceLayer/Containers/EarthClock.qml`: `homeLat`, `homeLon` and
+  `homeName` (the pin and its label).
+- `../scripts/earthfetch-k.sh`: `LAT` and `LON` (the weather).
+
+**4. Push the changed files and install the hooks.** Send back only the files
+the patches touched, so the copy on the TV keeps both of those files.
+
+```sh
+# still inside stock-qml from step 2
+(git diff --name-only HEAD; git ls-files --others --exclude-standard) \
+  | tar -cf - -T - | ssh root@<tv-ip> 'tar -C /var/lib/webosbrew/homeqml-k/qml -xf -'
+cd ..
+for f in hooks/70-homeqml-k hooks/81-earthclock-k; do
+  ssh root@<tv-ip> "cat > /var/lib/webosbrew/init.d/${f#hooks/}" < $f
+done
+ssh root@<tv-ip> 'cat > /var/lib/webosbrew/earthfetch-k.sh' < scripts/earthfetch-k.sh
+ssh root@<tv-ip> 'cd /var/lib/webosbrew && chmod 755 earthfetch-k.sh init.d/*-k && sh init.d/81-earthclock-k && sh init.d/70-homeqml-k'
+```
+
+The home screen restarts with the clock right away. The Earth and weather
+appear about a minute later, once the first download finishes.
+
+**5. The screensaver** (optional). It draws its Earth from the pictures the
+weather fetcher from step 4 downloads, so it needs that installed. Same idea as
+before: copy LG's screensaver on the TV, patch its clock file, send it back and
+install the hook.
+
+```sh
+ssh root@<tv-ip> 'mkdir -p /var/lib/webosbrew/screensaver-k && cp -a /usr/palm/applications/com.webos.app.screensaver/qml /var/lib/webosbrew/screensaver-k/'
+F=UserInterfaceLayer/Containers/Clock.qml
+mkdir -p ss/$(dirname $F)
+ssh root@<tv-ip> "cat /var/lib/webosbrew/screensaver-k/qml/$F" > ss/$F
+git apply --directory=ss patches/webos7/screensaver/01-live-earth-screensaver.patch
+ssh root@<tv-ip> "cat > /var/lib/webosbrew/screensaver-k/qml/$F" < ss/$F
+ssh root@<tv-ip> 'cat > /var/lib/webosbrew/init.d/72-screensaver-k' < hooks/72-screensaver-k
+ssh root@<tv-ip> 'chmod 755 /var/lib/webosbrew/init.d/72-screensaver-k && sh /var/lib/webosbrew/init.d/72-screensaver-k'
+```
+
+Reboot the TV once so a screensaver that already ran picks up the new file.
+After that it shows whenever the TV sits idle on the home screen.
+
+**6. Extras** (optional):
+
+```sh
+# rename an input; the new name shows everywhere
+ssh -tt root@<tv-ip> "luna-send -n 1 luna://com.webos.service.eim/setDeviceInfo '{\"id\":\"HDMI_1\",\"label\":\"PS5\"}'"
+```
+
+For the soundbar, set `BAR` in `scripts/soundbar-k.sh` to your soundbar's
+Bluetooth address, then install it the same way as the weather fetcher: the
+script goes in `/var/lib/webosbrew/`, `hooks/80-soundbar-k` in `init.d/`. To
+find the address:
+
+```sh
+ssh -tt root@<tv-ip> "luna-send -n 1 -f luna://com.webos.service.bluetooth2/device/getStatus '{}'"
+```
+
+The full details, including how the Earth is drawn, the data sources and their
+credits, are in
+[`docs/09-earth-clock-and-layout.md`](docs/09-earth-clock-and-layout.md).
+
+## Undo
+
+- **Home screen:** delete `/var/lib/webosbrew/init.d/70-homeqml-k` and reboot.
+  The stock home screen comes back.
+- **Screensaver:** delete `init.d/72-screensaver-k` and reboot.
+- **Weather and soundbar:** delete `init.d/81-earthclock-k` and
+  `init.d/80-soundbar-k`, then reboot.
+
+Nothing in LG's own files changes. The hooks lay a copy over them at every
+boot, and without the hook the copy is ignored.
+
+## How it works
+
+LG's home screen is a QML app on a read-only partition. You can't edit it in
+place, but you can mount an edited copy on top of it. A boot hook redoes the
+mount on every power-on and restarts the home app from the copy.
+
+One catch: webOS restores the home app from a saved memory snapshot, so your
+edits stay invisible until the hook deletes that snapshot.
+[`docs/02-how-the-home-app-works.md`](docs/02-how-the-home-app-works.md)
+explains it.
+
+The Earth is drawn on the TV's GPU by a small shader in one 400-line QML file.
+It uses about 30 MB of video memory.
 
 ## Tested TVs
 
-| Model | Year / webOS | Firmware | RAM | UI resolution | Patch set | Notes |
-|-------|--------------|----------|-----|---------------|-----------|-------|
-| 43UP8000PUR | 2021 / webOS 6.5 | 03.51.16 | 1 GB | Not measured. The background is made at 1920x1080 and goes in `images/2k` and `images/4k` | `patches/` | The original set. Screenshots through the VNC Server app |
-| 43UQ7070ZUD | 2022 / webOS 7.6 (webOS 22) | 04.60.90 | 1.3 GB | 1920x1080 on a 4K panel, so images load from `images/2k` | `patches/webos7/` | Stock home adds a "TV functions" shelf, which `01` removes. `05` also hides the "See User Guide" tile. Screenshots with the capture service need `SCREEN`, since `DISPLAY` comes back black. See [`docs/06-webos7.md`](docs/06-webos7.md). Patches `08`-`11` add the live Earth clock and bottom app row, see [`docs/09-earth-clock-and-layout.md`](docs/09-earth-clock-and-layout.md) |
-| 43UP8000PUR | 2021 / webOS 6.5.3 | 03.53.45 | 1 GB (about 1070 MB usable) | 1920x1080 on a 4K panel, so images load from `images/2k` | `patches/webos6-03.53/` | Same model as the first row, newer firmware. `01` and `03` needed new context, and `05` also hides the "See User Guide" tile. The LG Channels row above the apps goes away only with *Recommendations on Home* off. See [`docs/07-webos6-03.53.md`](docs/07-webos6-03.53.md) |
-| 32LM577BPUA | 2019 / webOS 4.5 ("webOS TV Lite") | 05.40.97 | 658 MB | 1920x1080 on an HD panel, so images load from `images/2k` | `patches/webos4.5/` | The full-screen home is `com.webos.app.fullhome`, so it uses `hooks/webos4.5/70-homeqml-k`. `01` also drops the "Trending now" row, and `05` also hides the "See User Guide" tile. VNC Server isn't supported, so screenshots come from the compositor. See [`docs/08-webos4.5.md`](docs/08-webos4.5.md) |
+| Model | webOS | Firmware | Patches | Notes |
+|-------|-------|----------|---------|-------|
+| 43UQ7070ZUD (2022) | 7.6 | 04.60.90 | `patches/webos7/` | Everything above. See [`docs/06-webos7.md`](docs/06-webos7.md) and [`docs/09`](docs/09-earth-clock-and-layout.md) |
+| 43UP8000PUR (2021) | 6.5 | 03.51.16 | `patches/` | Cleanup and photo background. The original set |
+| 43UP8000PUR (2021) | 6.5.3 | 03.53.45 | `patches/webos6-03.53/` | Same as above, newer firmware. See [`docs/07`](docs/07-webos6-03.53.md) |
+| 32LM577BPUA (2019) | 4.5 | 05.40.97 | `patches/webos4.5/` | Uses a different home app and its own hook. See [`docs/08`](docs/08-webos4.5.md) |
 
-Other models use the same home app structure, but file names and image sizes
-vary, so read your own files instead of pasting mine.
+Other models use the same home app, but file names and image sizes vary, so
+check your own files before applying a patch.
 
-![home screen](assets/screenshot.jpg)
+On webOS 4.5 and 6.x, apply that folder's patches the same way and follow the
+doc linked in the table. webOS 4.5 uses its own hook in `hooks/webos4.5/`.
 
+## More docs
 
-## What's here
+- [`docs/03-the-edits.md`](docs/03-the-edits.md): every cleanup patch, what it
+  changes and why
+- [`docs/04-going-further.md`](docs/04-going-further.md): your own apps and
+  running several TVs
+- [`docs/05-apps-and-settings.md`](docs/05-apps-and-settings.md): the homebrew
+  apps worth installing, and the privacy settings
 
-| Path | What it is |
-|------|-----------|
-| `docs/01-rooting.md` | How people root LG TVs, with links to the public tools (no exploit here) |
-| `docs/02-how-the-home-app-works.md` | The webOS home app is QML. The overlay and checkpoint trick that makes edits stick |
-| `docs/03-the-edits.md` | Every change, what it does and why, keyed to the patches |
-| `docs/04-going-further.md` | Building your own app, the screensaver, doing it across several TVs |
-| `docs/05-apps-and-settings.md` | The homebrew apps we install and why, plus the privacy pass |
-| `docs/06-webos7.md` | What changes on webOS 7 (webOS 22): ported patches, screen size, app notes |
-| `docs/07-webos6-03.53.md` | What changes on webOS 6.5 firmware 03.53.45: ported patches and the LG Channels row |
-| `docs/09-earth-clock-and-layout.md` | webOS 7: live Earth clock with weather, the app row at the bottom, compact input tiles, a new screensaver, a soundbar fix |
-| `docs/08-webos4.5.md` | What changes on firmware 05.40.97 (webOS 4.5): the full-screen home app, ported patches, 658 MB of RAM, screenshots |
-| `patches/` | One `git`-style patch per change, against LG's stock home QML (webOS 6.5) |
-| `patches/webos7/` | The same patches ported to webOS 7 |
-| `patches/webos6-03.53/` | The same patches for webOS 6.5 firmware 03.53.45 |
-| `patches/webos4.5/` | The same patches ported to firmware 05.40.97, webOS 4.5 (`com.webos.app.fullhome`) |
-| `hooks/70-homeqml-k` | Boot hook: bind-mounts the patched copy and relaunches home |
-| `hooks/72-screensaver-k`, `hooks/80-soundbar-k`, `hooks/81-earthclock-k` | Boot hooks for the screensaver overlay, the soundbar fix and the Earth/weather fetcher |
-| `scripts/earthfetch-k.sh`, `scripts/soundbar-k.sh` | The fetcher behind the Earth clock and the soundbar reconnect loop |
-| `hooks/webos4.5/70-homeqml-k` | The same hook for firmware 05.x (webOS 4.5), where the full-screen home is `com.webos.app.fullhome` |
-| `scripts/render_home_bg.py` | Turns the ESO Milky Way panorama into a TV-safe background (geometry is tuned to that image) |
-| `scripts/deploy.sh` | Copies the overlay to the TV and applies it |
+## Credits
 
-## The shape of it
+- Milky Way background: ESO/S. Brunier, CC BY 4.0
+- Day map and night lights: NASA EOSDIS GIBS (Blue Marble Next Generation,
+  VIIRS Black Marble)
+- Live clouds: NOAA/NESDIS STAR, GOES-West GeoColor
+- Weather: [Open-Meteo.com](https://open-meteo.com), CC BY 4.0
 
-LG's home screen is a QML app on a signed, read-only partition. You can't edit
-it in place, but you can bind-mount a writable copy over it and force the app to
-relaunch from your copy. A boot hook re-applies the mount on every power-on.
-That's the whole mechanism. The rest is reading LG's QML and changing the right
-lines.
+## Safety
 
-[`docs/02-how-the-home-app-works.md`](docs/02-how-the-home-app-works.md) covers
-the one real gotcha: webOS restores the home app from a frozen memory
-checkpoint, so you have to delete the checkpoint or your edits stay invisible.
-
-## Quick start (TV already rooted, SSH reachable)
-
-```sh
-# 1. Copy LG's stock home QML off the TV to ./stock-qml, then:
-cd stock-qml
-git init -q && git add -A && git commit -qm stock      # baseline to diff against
-git apply ../patches/*.patch                            # webOS 6.x; on webOS 7 use ../patches/webos7/*.patch, on firmware 05.x ../patches/webos4.5/*.patch
-
-# 2. Render the background. The rotation/crop are tuned for the 3840x1920 ESO
-#    Milky Way panorama; for another photo, adjust the constants at the top.
-python3 ../scripts/render_home_bg.py my_photo.jpg bg_space_SIZE.jpg
-cp bg_space_1920.jpg UserInterfaceLayer/Components/images/2k/bg_space.jpg
-cp bg_space_1920.jpg UserInterfaceLayer/Components/images/4k/bg_space.jpg
-
-# 3. Push the copy to the TV and apply (see scripts/deploy.sh for the real thing)
-```
-
-Apply the patches one at a time and look at the screen after each. Match LG's
-exact image dimensions, keep assets small (these TVs have 1 to 1.3 GB of RAM and
-thrash on oversized images), and always keep LG's original QML so you can roll back.
-
-## Safety / scope
-
-- This modifies your own TV's UI. Nothing here targets anyone else's device.
-- Keep a backup of the stock QML and your boot hooks. A bad QML edit black-screens
-  the home app, and restoring the backup and relaunching fixes it.
-- Don't let the TV auto-update. The public rooting tools include an update
-  blocker for exactly this reason.
+- This changes the screens of your own TV. Nothing here touches anyone else's
+  device.
+- A bad QML edit can leave the home screen black. Delete the hook and reboot to
+  get the stock one back.
+- These TVs have 1 to 1.3 GB of RAM. Keep images at LG's sizes.

@@ -110,7 +110,7 @@ has around 430 MB free after boot. The fetcher is one shell loop calling
 ## Setup
 
 1. Apply the patches (on top of `patches/webos7/01` to `07`) as in the
-   [quick start](../README.md#quick-start-tv-already-rooted-ssh-reachable).
+   [quick start](../README.md#set-it-up-webos-7).
 2. Set home in two places:
    - `scripts/earthfetch-k.sh`: `LAT` and `LON`, used for the weather.
    - `EarthClock.qml`: `homeLat`, `homeLon` and `homeName`, used for the pin
