@@ -136,8 +136,9 @@ same structure as home. The patch rewrites its `Clock.qml`. It keeps the parts
 `MainView.qml` calls (`playing`, `dataReady`, `looped()` and `animation`) and
 draws a small live Earth over a black screen, using the pretty style and the
 same files the home fetcher keeps fresh, with a quiet clock and date under it.
-Every loop (about 30 seconds) the screensaver reloads it, and it moves to a new
-random spot, so nothing sits still on the panel.
+The Earth turns under a fixed sun, one turn every 2 minutes. Every loop (about
+30 seconds) the screensaver reloads it, and it moves to a new random spot, so
+nothing sits still on the panel.
 
 `hooks/72-screensaver-k` bind-mounts a patched copy over the stock one, the same
 trick as the home overlay:
@@ -149,7 +150,8 @@ ssh root@TV 'mkdir -p /var/lib/webosbrew/screensaver-k && cp -a /usr/palm/applic
 
 The screensaver only starts when the TV is idle with the screen on. Launching
 it by hand with `applicationManager/launch` returns success, but nothing shows.
-Status: installed on the test TV, not yet seen running on screen.
+After changing `Clock.qml`, kill the running screensaver's `qml-runner` so the
+next start loads the new file.
 
 ## Soundbar that won't stay connected
 

@@ -1,5 +1,5 @@
 diff --git a/UserInterfaceLayer/Containers/Clock.qml b/UserInterfaceLayer/Containers/Clock.qml
-index 94532c7..5deab9a 100755
+index 94532c7..010a5ab 100755
 --- a/UserInterfaceLayer/Containers/Clock.qml
 +++ b/UserInterfaceLayer/Containers/Clock.qml
 @@ -1,31 +1,20 @@
@@ -41,7 +41,7 @@ index 94532c7..5deab9a 100755
      property real shift
      property bool isPartial: false
      property string guideString: ""
-@@ -34,6 +23,13 @@ Item {
+@@ -34,6 +23,24 @@ Item {
      property bool dataReady: playing && root.timeUpdated
      property alias animation: anim
  
@@ -51,11 +51,22 @@ index 94532c7..5deab9a 100755
 +    property real lookLon: -110
 +    property real globeSize: 400
 +    property vector3d sunDir: sunVector(new Date())
++    // the Earth turns under a fixed sun, one turn every 2 minutes; picks up
++    // where the last loop left off
++    readonly property real spinPeriod: 120000
++    property real spin: (Date.now() % spinPeriod) / spinPeriod * 2 * Math.PI
++
++    NumberAnimation on spin {
++        id: spinAnim
++        running: root.visible
++        from: root.spin; to: root.spin + 2 * Math.PI
++        duration: root.spinPeriod; loops: Animation.Infinite
++    }
 +
      signal looped()
  
      onDataReadyChanged: {
-@@ -45,80 +41,29 @@ Item {
+@@ -45,80 +52,29 @@ Item {
          }
      }
  
@@ -157,7 +168,7 @@ index 94532c7..5deab9a 100755
          onRunningChanged: {
              if (!running) {
                  looped();
-@@ -126,148 +71,132 @@ Item {
+@@ -126,148 +82,132 @@ Item {
          }
      }
  
@@ -213,7 +224,6 @@ index 94532c7..5deab9a 100755
 +                id: prettyGlobe
 +                anchors.fill: parent
 +                visible: dayImg.status === Image.Ready && nightImg.status === Image.Ready
-+                layer.enabled: true
 +                // camera far out over lookLat/lookLon, the globe fills globeSize
 +                readonly property real dist: 8.0
 +                property variant dayTex: dayImg
@@ -221,6 +231,7 @@ index 94532c7..5deab9a 100755
 +                property variant cloudTex: earthImg
 +                property real cloudsOn: earthImg.status === Image.Ready ? 1.0 : 0.0
 +                property vector3d sun: root.sunDir
++                property real spin: root.spin
 +                property vector3d camC: root.unit(root.lookLat, root.lookLon).times(dist)
 +                property vector3d camF: camC.times(-1).normalized()
 +                property vector3d camR: camF.crossProduct(Qt.vector3d(0, 0, 1)).normalized()
@@ -236,7 +247,7 @@ index 94532c7..5deab9a 100755
 +            #endif
 +            varying vec2 qt_TexCoord0;
 +            uniform sampler2D dayTex; uniform sampler2D nightTex; uniform sampler2D cloudTex;
-+            uniform float cloudsOn; uniform vec3 sun;
++            uniform float cloudsOn; uniform vec3 sun; uniform float spin;
 +            uniform float qt_Opacity;
 +            uniform vec3 camC; uniform vec3 camR; uniform vec3 camU; uniform vec3 camF;
 +            uniform float focal; uniform vec2 pp; uniform vec2 res;
@@ -297,7 +308,7 @@ index 94532c7..5deab9a 100755
 -                    RotationAnimation { direction: RotationAnimation.Clockwise; duration: 100 }
 +                vec3 p = camC + d * (-b - sqrt(disc));
 +                float lat = asin(clamp(p.z, -1.0, 1.0));
-+                float lon = atan(p.y, p.x);
++                float lon = mod(atan(p.y, p.x) + spin + PI, 2.0 * PI) - PI;
 +                vec2 uv = vec2(lon / (2.0 * PI) + 0.5, 0.5 - lat / PI);
 +                vec3 day = texture2D(dayTex, uv).rgb;
 +                vec3 night = texture2D(nightTex, uv).rgb;
@@ -328,7 +339,7 @@ index 94532c7..5deab9a 100755
 -                antialiasing: true
 -                smooth: true
 +                float haze = pow(1.0 - max(0.0, -dot(d, p)), 3.0) * (0.25 + 0.5 * dayW);
-+                float dusk = smoothstep(0.0, 0.08, sd) * (1.0 - smoothstep(0.08, 0.25, sd)) * 0.25;
++                float dusk = smoothstep(0.0, 0.08, sd) * (1.0 - smoothstep(0.08, 0.25, sd)) * 0.10;
 +                col = mix(col, vec3(0.35, 0.6, 1.0), haze) + dusk * vec3(0.9, 0.45, 0.2);
 +                gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0) * qt_Opacity;
 +            }"
@@ -414,7 +425,7 @@ index 94532c7..5deab9a 100755
          id: mask
          anchors.fill: parent
          color: "black"
-@@ -283,23 +212,12 @@ Item {
+@@ -283,23 +223,12 @@ Item {
      }
  
      function updateTime () {
