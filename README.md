@@ -42,7 +42,8 @@ On webOS 4.5 and 6.x you get the cleanup and a full-screen photo background
   an update blocker.
 - **You have `git` and `ssh`** on your computer.
 
-Replace `<tv-ip>` below with your TV's address.
+Replace `<tv-ip>` below with your TV's address. Run the commands from the repo
+folder.
 
 ## Set it up (webOS 7)
 
@@ -59,7 +60,7 @@ mkdir stock-qml && ssh root@<tv-ip> 'tar -C /var/lib/webosbrew/homeqml-k/qml -cf
 
 ```sh
 cd stock-qml
-git init -q && git add -A && git commit -qm stock   # so you can see and undo every change
+git init -q && git add -A && git -c user.name=me -c user.email=me@localhost commit -qm stock   # so you can see and undo every change
 git apply ../patches/webos7/*.patch
 ```
 
@@ -85,6 +86,7 @@ cp ../assets/bg_space.jpg UserInterfaceLayer/Components/images/4k/bg_space.jpg
 the patches touched, so the copy on the TV keeps both of those files.
 
 ```sh
+# still inside stock-qml from step 2
 (git diff --name-only HEAD; git ls-files --others --exclude-standard) \
   | tar -cf - -T - | ssh root@<tv-ip> 'tar -C /var/lib/webosbrew/homeqml-k/qml -xf -'
 cd ..
@@ -98,8 +100,10 @@ ssh root@<tv-ip> 'cd /var/lib/webosbrew && chmod 755 earthfetch-k.sh init.d/*-k 
 The home screen restarts with the clock right away. The Earth and weather
 appear about a minute later, once the first download finishes.
 
-**5. The screensaver** (optional). Same idea: copy LG's screensaver on the TV,
-patch its clock file, send it back and install the hook.
+**5. The screensaver** (optional). It draws its Earth from the pictures the
+weather fetcher from step 4 downloads, so it needs that installed. Same idea as
+before: copy LG's screensaver on the TV, patch its clock file, send it back and
+install the hook.
 
 ```sh
 ssh root@<tv-ip> 'mkdir -p /var/lib/webosbrew/screensaver-k && cp -a /usr/palm/applications/com.webos.app.screensaver/qml /var/lib/webosbrew/screensaver-k/'
