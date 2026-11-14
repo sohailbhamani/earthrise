@@ -161,8 +161,13 @@ If a Bluetooth soundbar drops after every power cycle, `scripts/soundbar-k.sh`
 fixes it. It subscribes to `tvpower/getPowerState`. On every power-on, from
 standby or a cold boot, it reconnects the soundbar's A2DP and sets the sound
 output to `bt_soundbar`. If the soundbar is off, it leaves the TV speakers
-alone. Waking from the screensaver doesn't count as a power-on, so a manual
-switch back to the TV speakers sticks until the next power-on. Set `BAR` to
+alone. A manual switch back to the TV speakers sticks until the next
+power-on. If the soundbar falls asleep and drops off while the screensaver
+runs, it reconnects when the screensaver ends.
+
+When the soundbar connects while the TV speakers are selected, the TV shows
+"[soundbar] is connecting to your TV" with OK and Cancel. It goes ahead on its
+own after a few seconds. Cancel, or Back, drops the soundbar. Set `BAR` to
 your soundbar's address:
 
 ```sh
