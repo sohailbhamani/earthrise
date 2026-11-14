@@ -1,0 +1,28 @@
+diff --git a/UserInterfaceLayer/Containers/Sub/MobileComponent.qml b/UserInterfaceLayer/Containers/Sub/MobileComponent.qml
+index 3609e28..02fc8eb 100644
+--- a/UserInterfaceLayer/Containers/Sub/MobileComponent.qml
++++ b/UserInterfaceLayer/Containers/Sub/MobileComponent.qml
+@@ -242,7 +242,7 @@ Selectable {
+             anchors.bottomMargin: styleSheet.getRValue(24)
+             anchors.left: parent.left
+             anchors.leftMargin: styleSheet.getRValue(24)
+-            visible: entry && entry.subText ? entry.subText !== "" : false
++            visible: false // krieger: compact tiles show the name only (was: entry.subText !== "")
+ 
+             activateScroll: hasFocus
+             font.family: fontManager.smart_Regular.family
+diff --git a/UserInterfaceLayer/GlobalStyle.qml b/UserInterfaceLayer/GlobalStyle.qml
+index 0b50f8d..a9655e3 100755
+--- a/UserInterfaceLayer/GlobalStyle.qml
++++ b/UserInterfaceLayer/GlobalStyle.qml
+@@ -385,8 +385,8 @@ QtObject {
+     property QtObject relatedItem: QtObject {
+         property color progressBgColor: "#5D5D5D"
+         property color progressColor: "#ffffff"
+-        property int homeConnectWidth: 309 * screen.scaleFactor
+-        property int homeConnectHeight: 192 * screen.scaleFactor
++        property int homeConnectWidth: 210 * screen.scaleFactor // krieger: was 309, compact input tiles
++        property int homeConnectHeight: 126 * screen.scaleFactor // krieger: was 192, app-icon height
+ 
+         property int categoryHeight: 40
+     }

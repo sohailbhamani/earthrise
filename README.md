@@ -33,8 +33,9 @@ setup.
 
 ![the screensaver](assets/webos7-screensaver.jpg)
 
-On webOS 4.5 and 6.x you get the cleanup and a full-screen photo background
-(the patches stop at `07`). See [Tested TVs](#tested-tvs).
+webOS 6.5.3 gets all of it too, from `patches/webos6-03.53/`. On webOS 4.5 and
+6.5 (03.51) you get the cleanup and a full-screen photo background (the patches
+stop at `07`). See [Tested TVs](#tested-tvs).
 
 ## Before you start
 
@@ -172,7 +173,7 @@ It uses about 30 MB of video memory.
 |-------|-------|----------|---------|-------|
 | 43UQ7070ZUD (2022) | 7.6 | 04.60.90 | `patches/webos7/` | Everything above. See [`docs/06-webos7.md`](docs/06-webos7.md) and [`docs/09`](docs/09-earth-clock-and-layout.md) |
 | 43UP8000PUR (2021) | 6.5 | 03.51.16 | `patches/` | Cleanup and photo background. The original set |
-| 43UP8000PUR (2021) | 6.5.3 | 03.53.45 | `patches/webos6-03.53/` | Same as above, newer firmware. See [`docs/07`](docs/07-webos6-03.53.md) |
+| 43UP8000PUR (2021) | 6.5.3 | 03.53.45 | `patches/webos6-03.53/` | Everything, same as webOS 7. See [`docs/07`](docs/07-webos6-03.53.md) |
 | 32LM577BPUA (2019) | 4.5 | 05.40.97 | `patches/webos4.5/` | Uses a different home app and its own hook. See [`docs/08`](docs/08-webos4.5.md) |
 
 Other models use the same home app, but file names and image sizes vary, so

@@ -1,0 +1,12 @@
+diff --git a/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml b/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
+index b3a54d9..c983465 100644
+--- a/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
++++ b/Interfaces/ConnectionsInterfaces/ConnectionsInterfaces.qml
+@@ -1127,6 +1127,7 @@ Item {
+ 
+     //static objects
+     function addLGChannelsItem(updateFlag) {
++        return; // krieger: no LG Channels tile on the inputs row
+ 
+         const lgServiceCountries = ["GBR","DNK","NLD","NOR","SWE"];
+         var lgChannelsAppId = "com.webos.app.lgchannels";
