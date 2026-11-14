@@ -78,10 +78,10 @@ index 0000000..160b6cc
 +        xhr.send()
 +    }
 +    function icon(code, day) {
-+        if (code === 0) return day ? "☀" : "☾"
++        if (code === 0) return day ? "☀" : "★"
 +        if (code <= 2) return day ? "⛅" : "☁"
 +        if (code === 3) return "☁"
-+        if (code <= 48) return "≋"
++        if (code <= 48) return "≡"
 +        if (code <= 67 || (code >= 80 && code <= 82)) return "☂"
 +        if (code <= 77 || code === 85 || code === 86) return "❄"
 +        return "⚡"
